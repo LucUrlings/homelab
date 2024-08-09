@@ -1,0 +1,9 @@
+configs/*
+data/*
+secrets/*
+
+.DS_Store
+
+.idea/
+
+.env

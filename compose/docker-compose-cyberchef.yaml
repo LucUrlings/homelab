@@ -1,0 +1,20 @@
+services:
+    cyberchef:
+      container_name: cyberchef
+      image: 'ghcr.io/gchq/cyberchef:latest'
+      security_opt:
+        - no-new-privileges:true
+      restart: unless-stopped
+      # profiles: ["apps", "all"]
+      networks:
+        - t3_proxy
+      labels:
+        - "traefik.enable=true"
+        # HTTP Routers
+        - "traefik.http.routers.cyberchef-rtr.entrypoints=websecure"
+        - "traefik.http.routers.cyberchef-rtr.rule=Host(`cyberchef.$DOMAINNAME_HS`)"
+        # Middlewares
+        - "traefik.http.routers.cyberchef-rtr.middlewares=chain-oauth@file"
+        # HTTP Services
+        - "traefik.http.routers.cyberchef-rtr.service=cyberchef-svc"
+        - "traefik.http.services.cyberchef-svc.loadbalancer.server.port=80"

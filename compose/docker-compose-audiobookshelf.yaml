@@ -1,0 +1,31 @@
+services:
+  audiobookshelf:
+    container_name: audiobookshelf
+    image: ghcr.io/advplyr/audiobookshelf:latest
+    volumes:
+      - $DOCKERDIR/appdata/audiobookshelf:/config
+      - $DATADIR:/data
+    environment:
+      - TZ=${TZ}
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth Bypass
+      - "traefik.http.routers.audiobookshelf-rtr-bypass.entrypoints=websecure"
+      # - "traefik.http.routers.audiobookshelf-rtr-bypass.rule=Host(`audiobookshelf.$DOMAINNAME_HS`) && (Header(`X-Api-Key`, `$audiobookshelf_API_KEY`) || Query(`apikey`, `$audiobookshelf_API_KEY`))"
+      - "traefik.http.routers.audiobookshelf-rtr-bypass.rule=Host(`audiobookshelf.$DOMAINNAME_HS`) && Header(`traefik-auth-bypass-key`, `$TRAEFIK_AUTH_BYPASS_KEY`)" # Bypass Auth for LunaSea on iOS
+      # - "traefik.http.routers.audiobookshelf-rtr-bypass.rule=Host(`audiobookshelf.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.audiobookshelf-rtr-bypass.priority=100"
+      # HTTP Routers Auth
+      - "traefik.http.routers.audiobookshelf-rtr.entrypoints=websecure"
+      - "traefik.http.routers.audiobookshelf-rtr.rule=Host(`audiobookshelf.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.audiobookshelf-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.audiobookshelf-rtr-bypass.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.audiobookshelf-rtr.middlewares=chain-oauth@file"
+      # - "traefik.http.routers.audiobookshelf-rtr-bypass.middlewares=chain-basic-auth@file" # For Basic HTTP Authentication
+      # HTTP Services
+      - "traefik.http.routers.audiobookshelf-rtr.service=audiobookshelf-svc"
+      - "traefik.http.routers.audiobookshelf-rtr-bypass.service=audiobookshelf-svc"
+      - "traefik.http.services.audiobookshelf-svc.loadbalancer.server.port=80"

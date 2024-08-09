@@ -1,0 +1,39 @@
+services:
+  readarr:
+    container_name: readarr
+    image: linuxserver/readarr:develop
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - socket_proxy
+    ports:
+      - 8787:8787
+    environment:
+      - PUID=${PUID} # default user id, defined in .env
+      - PGID=${PGID} # default group id, defined in .env
+      - TZ=${TZ} # timezone, defined in .env
+      - UMASK_SET=022 #optional
+    volumes:
+      - $DOCKERDIR/appdata/readarr:/config
+      - $DATADIR:/data
+      - "/etc/localtime:/etc/localtime:ro"
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth Bypass
+      - "traefik.http.routers.readarr-rtr-bypass.entrypoints=websecure"
+      # - "traefik.http.routers.readarr-rtr-bypass.rule=Host(`readarr.$DOMAINNAME_HS`) && (Header(`X-Api-Key`, `$readarr_API_KEY`) || Query(`apikey`, `$readarr_API_KEY`))"
+      - "traefik.http.routers.readarr-rtr-bypass.rule=Host(`readarr.$DOMAINNAME_HS`) && Header(`traefik-auth-bypass-key`, `$TRAEFIK_AUTH_BYPASS_KEY`)" # Bypass Auth for LunaSea on iOS
+      # - "traefik.http.routers.readarr-rtr-bypass.rule=Host(`readarr.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.readarr-rtr-bypass.priority=100"
+      # HTTP Routers Auth
+      - "traefik.http.routers.readarr-rtr.entrypoints=websecure"
+      - "traefik.http.routers.readarr-rtr.rule=Host(`readarr.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.readarr-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.readarr-rtr-bypass.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.readarr-rtr.middlewares=chain-oauth@file"
+      # - "traefik.http.routers.readarr-rtr-bypass.middlewares=chain-basic-auth@file" # For Basic HTTP Authentication
+      # HTTP Services
+      - "traefik.http.routers.readarr-rtr.service=readarr-svc"
+      - "traefik.http.routers.readarr-rtr-bypass.service=readarr-svc"
+      - "traefik.http.services.readarr-svc.loadbalancer.server.port=8787"

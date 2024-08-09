@@ -1,0 +1,32 @@
+services: 
+  jellyfin:
+    image: linuxserver/jellyfin:latest
+    container_name: jellyfin
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - socket_proxy
+    # devices:
+      # - /dev/dri:/dev/dri # for harware transcoding
+    environment:
+      - PUID=${PUID} # default user id, defined in .env
+      - PGID=${PGID} # default group id, defined in .env
+      - TZ=${TZ} # timezone, defined in .env
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - $DOCKERDIR/appdata/jellyfin:/config
+      - $DATADIR/media:/data/media
+      - /dev/shm:/data/transcode # Offload transcoding to RAM if you have enough RAM
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.jellyfin.entrypoints=websecure"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.$DOMAINNAME_1`)"
+      # Middlewares
+      # - "traefik.http.routers.jellyfin.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.jellyfin.service=jellyfin-svc"
+      - "traefik.http.services.jellyfin-svc.loadbalancer.server.port=8096"
+    ports:
+      - 8096:8096
