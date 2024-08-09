@@ -1,7 +1,7 @@
 services:
     cyberchef:
       container_name: cyberchef
-      image: 'ghcr.io/gchq/cyberchef:latest'
+      image: 'ghcr.io/k8s-at-our-homes/cyberchef:10.19.0'
       security_opt:
         - no-new-privileges:true
       restart: unless-stopped
@@ -17,4 +17,4 @@ services:
         - "traefik.http.routers.cyberchef-rtr.middlewares=chain-oauth@file"
         # HTTP Services
         - "traefik.http.routers.cyberchef-rtr.service=cyberchef-svc"
-        - "traefik.http.services.cyberchef-svc.loadbalancer.server.port=80"
+        - "traefik.http.services.cyberchef-svc.loadbalancer.server.port=8080"
