@@ -1,6 +1,6 @@
 services:
   scrutiny:
-    image: ghcr.io/analogj/scrutiny:master-web
+    image: ghcr.io/analogj/scrutiny:v0.8.1
     container_name: scrutiny
     security_opt:
       - no-new-privileges:true

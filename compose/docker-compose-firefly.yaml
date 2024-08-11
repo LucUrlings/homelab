@@ -1,7 +1,7 @@
 services:
   # Firefly III - Personal Finance Manager
   firefly:
-    image: fireflyiii/core:latest
+    image: fireflyiii/core:version-6.1.19
     container_name: firefly
     security_opt:
       - no-new-privileges:true

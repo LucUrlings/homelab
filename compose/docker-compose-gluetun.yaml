@@ -3,7 +3,7 @@ services:
   # Gluetun only for use by torrent clients + on demand lan devices.
   # Arr apps do not need VPN (not recommended), unless you have ISP/country restrictions.
   gluetun:
-    image: qmcgaw/gluetun
+    image: qmcgaw/gluetun:v3.39
     container_name: gluetun
     security_opt:
       - no-new-privileges:true

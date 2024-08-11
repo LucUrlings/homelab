@@ -1,7 +1,7 @@
 services:
   # Dockge - Docker Compose Manager
   dockge:
-    image: louislam/dockge
+    image: louislam/dockge:1.4.2
     container_name: dockge
     security_opt:
       - no-new-privileges:true

@@ -1,7 +1,7 @@
 services:
   # DeUnhealth - Restart your unhealthy containers safely (e.g. containers depending on VPN and VPN reconnects)
   deunhealth:
-    image: qmcgaw/deunhealth
+    image: qmcgaw/deunhealth:v0.3.0
     container_name: deunhealth
     security_opt:
       - no-new-privileges:true

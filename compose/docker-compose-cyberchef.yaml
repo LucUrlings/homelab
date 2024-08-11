@@ -1,7 +1,7 @@
 services:
     cyberchef:
       container_name: cyberchef
-      image: 'ghcr.io/k8s-at-our-homes/cyberchef:10.19.0'
+      image: ghcr.io/k8s-at-our-homes/cyberchef:10.19.0
       security_opt:
         - no-new-privileges:true
       restart: unless-stopped

@@ -3,7 +3,7 @@ services:
   # Disable SABNnzbd's built-in HTTPS support for traefik proxy to work
   # Needs trailing / if using PathPrefix
   sabnzbd:
-    image: lscr.io/linuxserver/sabnzbd:latest
+    image: lscr.io/linuxserver/sabnzbd:4.3.2
     container_name: sabnzbd
     security_opt:
       - no-new-privileges:true

@@ -1,6 +1,6 @@
 services: 
   jellyfin:
-    image: linuxserver/jellyfin:latest
+    image: linuxserver/jellyfin:10.9.9
     container_name: jellyfin
     restart: unless-stopped
     networks:

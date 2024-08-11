@@ -1,7 +1,7 @@
 services:
   # CrowdSec Bouncer - Traefik
   traefik-bouncer:
-    image: fbonalair/traefik-crowdsec-bouncer
+    image: fbonalair/traefik-crowdsec-bouncer:0.5.0
     container_name: traefik-bouncer
     security_opt:
       - no-new-privileges:true

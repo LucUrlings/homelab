@@ -2,7 +2,7 @@ services:
   # Guacamole - Remote desktop, SSH, on Telnet on any HTML5 Browser
   # Create all databases and tables first
   guacamole:
-    image: guacamole/guacamole:latest
+    image: guacamole/guacamole:1.5.5
     container_name: guacamole
     security_opt:
       - no-new-privileges:true

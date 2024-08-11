@@ -3,7 +3,7 @@ services:
   # Docker-GC - Automatic Docker Garbage Collection
   # Create docker-gc-exclude file
   docker-gc:
-    image: clockworksoul/docker-gc-cron:latest
+    image: clockworksoul/docker-gc-cron:20240219
     container_name: docker-gc
     security_opt:
       - no-new-privileges:true

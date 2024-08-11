@@ -1,6 +1,5 @@
-configs/*
-data/*
-secrets/*
+configs/
+data/
 
 .DS_Store
 

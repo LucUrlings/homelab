@@ -1,6 +1,6 @@
 services:
   ddclient:
-    image: lscr.io/linuxserver/ddclient:latest
+    image: lscr.io/linuxserver/ddclient:3.11.2
     container_name: ddclient
     environment:
       TZ: $TZ
