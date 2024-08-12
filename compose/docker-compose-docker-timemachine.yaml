@@ -1,0 +1,17 @@
+services:
+    timemachine:
+      image: mbentley/timemachine:smb-20240811
+      restart: unless-stopped
+      container_name: timemachine
+      network_mode: host
+      environment:
+        - TM_USERNAME=$TM_USERNAME
+        - TM_GROUPNAME=$TM_GROUPNAME
+        - PASSWORD=$TM_PASSWORD
+        - TM_UID=$PUID
+        - TM_GID=$PGID
+        - SET_PERMISSIONS=false
+        - VOLUME_SIZE_LIMIT=0
+      volumes:
+        - $DATADIR/timemachine:/opt/timemachine
+      tmpfs: /run/samba

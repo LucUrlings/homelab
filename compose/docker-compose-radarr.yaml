@@ -5,9 +5,9 @@ services:
   radarr:
     image: lscr.io/linuxserver/radarr:5.8.3 # latest was causing "Error parsing column 45"
     container_name: radarr
+    restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    restart: "no"
     # profiles: ["media", "arrs", "all"]
     networks:
       - t3_proxy

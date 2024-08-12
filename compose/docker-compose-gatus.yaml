@@ -2,8 +2,7 @@ services:
   gatus:
     container_name: gatus
     image: twinproduction/gatus:v5.11.0
-    ports:
-      - 3001:8080
+    restart: unless-stopped
     networks:
       - t3_proxy
       - socket_proxy

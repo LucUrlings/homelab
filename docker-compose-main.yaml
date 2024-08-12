@@ -49,10 +49,13 @@ include:
   # - $USERDIR/docker/homelab/compose/docker-compose-ddclient.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-adguard.yaml
 
+  - $USERDIR/docker/homelab/compose/docker-compose-docker-timemachine.yaml
+
   # CORE
   - $USERDIR/docker/homelab/compose/docker-compose-traefik.yaml
   - $USERDIR/docker/homelab/compose/docker-compose-socket-proxy.yaml
   - $USERDIR/docker/homelab/compose/docker-compose-oauth.yaml
+  - $USERDIR/docker/homelab/compose/docker-compose-wizarr.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-authelia.yaml
   - $USERDIR/docker/homelab/compose/docker-compose-dockge.yaml
   # SECURITY

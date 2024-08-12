@@ -1,0 +1,19 @@
+services:
+  wizarr:
+    container_name: wizarr
+    image: ghcr.io/wizarrrr/wizarr:4.1.1
+    restart: unless-stopped
+    volumes:
+      - $DOCKERDIR/appdata/wizarr:/data/database
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.wizarr-rtr.entrypoints=websecure"
+      - "traefik.http.routers.wizarr-rtr.rule=Host(`wizarr.$DOMAINNAME_HS`)"
+      # Middlewares
+      - "traefik.http.routers.wizarr-rtr.middlewares=chain-no-auth@file"
+      # HTTP Services
+      - "traefik.http.routers.wizarr-rtr.service=wizarr-svc"
+      - "traefik.http.services.wizarr-svc.loadbalancer.server.port=5690"

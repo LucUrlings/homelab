@@ -2,6 +2,7 @@ services:
   audiobookshelf:
     container_name: audiobookshelf
     image: ghcr.io/advplyr/audiobookshelf:2.12.3
+    restart: unless-stopped
     volumes:
       - $DOCKERDIR/appdata/audiobookshelf:/config
       - $DATADIR:/data
