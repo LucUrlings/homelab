@@ -26,10 +26,6 @@ Here’s a sneak peek into the tech running the show:
 - **Role:** Audiobook Server
 - **Why It’s Awesome:** Whether I’m on a long drive or just chilling at home, Audiobookshelf keeps my audiobook collection organized and accessible.
 
-### 📜 Bazarr: The Subtitle Whisperer
-- **Role:** Subtitle Management
-- **Why It’s Awesome:** Bazarr ensures that I never miss a word by automatically fetching subtitles for all my media.
-
 ### 🧙‍♂️ CyberChef: The Data Alchemist
 - **Role:** Cyber Swiss Army Knife
 - **Why It’s Awesome:** Need to manipulate, encode, or analyze data? CyberChef is the wizard that can turn raw data into gold.
@@ -45,10 +41,6 @@ Here’s a sneak peek into the tech running the show:
 ### 🛠️ Portainer: The Container Overlord
 - **Role:** Container Management
 - **Why It’s Awesome:** Portainer makes managing Docker containers a breeze. It’s like having a command center for all my containerized apps.
-
-### 🎵 Lidarr: The Music Collector
-- **Role:** Music Download Automation
-- **Why It’s Awesome:** Lidarr scours the web for new music releases and brings them straight to my collection. It’s like having a personal DJ.
 
 ### 🚨 Prowlarr: The Indexer Whisperer
 - **Role:** Indexer Management
