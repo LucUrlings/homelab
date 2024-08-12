@@ -57,7 +57,6 @@ include:
   - $USERDIR/docker/homelab/compose/docker-compose-oauth.yaml
   - $USERDIR/docker/homelab/compose/docker-compose-wizarr.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-authelia.yaml
-  - $USERDIR/docker/homelab/compose/docker-compose-dockge.yaml
   # SECURITY
   # - $USERDIR/docker/homelab/compose/docker-compose-crowdsec.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-traefik-bouncer.yaml
@@ -84,7 +83,6 @@ include:
   # - $USERDIR/docker/homelab/compose/docker-compose-notifiarr.yaml
   # MONITORING
   # - $USERDIR/docker/homelab/compose/docker-compose-grafana.yaml
-  - $USERDIR/docker/homelab/compose/docker-compose-dozzle.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-scrutiny.yaml
   # ADMIN
   # - $USERDIR/docker/homelab/compose/docker-compose-guacamole.yaml
@@ -112,3 +110,6 @@ include:
   # - $USERDIR/docker/homelab/compose/docker-compose-jdownloader.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-firefox.yaml
   # - $USERDIR/docker/homelab/compose/docker-compose-node-exporter.yaml
+  # Archived:
+  # - $USERDIR/docker/homelab/compose/docker-compose-dockge.yaml
+  # - $USERDIR/docker/homelab/compose/docker-compose-dozzle.yaml
