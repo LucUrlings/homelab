@@ -1,5 +1,5 @@
-configs/
-data/
+homelab-configs/
+mnt-storage/
 
 .DS_Store
 
