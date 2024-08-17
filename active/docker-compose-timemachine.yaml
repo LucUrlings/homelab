@@ -11,7 +11,7 @@ services:
         - TM_UID=$PUID
         - TM_GID=$PGID
         - SET_PERMISSIONS=false
-        - VOLUME_SIZE_LIMIT=0
+        - VOLUME_SIZE_LIMIT=1000000000000
       volumes:
-        - $DATADIR/timemachine:/opt/timemachine
+        - $DATADIR/timemachine:/opt/$TM_USERNAME
       tmpfs: /run/samba

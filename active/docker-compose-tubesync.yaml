@@ -1,0 +1,26 @@
+services:
+  tubesync:
+    image: ghcr.io/meeb/tubesync:v0.13.7
+    container_name: tubesync
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    volumes:
+      - $DOCKERDIR/appdata/tubesync:/config
+      - $DATADIR/media/youtube:/downloads
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.tubesync-rtr.entrypoints=websecure"
+      - "traefik.http.routers.tubesync-rtr.rule=Host(`tubesync.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.tubesync-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.tubesync-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.tubesync-rtr.service=tubesync-svc"
+      - "traefik.http.routers.tubesync-rtr-bypass.service=tubesync-svc"
+      - "traefik.http.services.tubesync-svc.loadbalancer.server.port=4848"

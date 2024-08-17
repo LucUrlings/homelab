@@ -49,7 +49,8 @@ include:
   # - $USERDIR/docker/homelab/active/docker-compose-ddclient.yaml
   # - $USERDIR/docker/homelab/active/docker-compose-adguard.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose-docker-timemachine.yaml
+  - $USERDIR/docker/homelab/active/docker-compose-timemachine.yaml
+  # - $USERDIR/docker/homelab/active/docker-compose-tubesync.yaml
 
   # CORE
   - $USERDIR/docker/homelab/active/docker-compose-traefik.yaml
