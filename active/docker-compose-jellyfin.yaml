@@ -22,7 +22,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers
       - "traefik.http.routers.jellyfin.entrypoints=websecure"
-      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.$DOMAINNAME_1`)"
+      - "traefik.http.routers.jellyfin.rule=Host(`jellyfin.$DOMAINNAME`)"
       # Middlewares
       # - "traefik.http.routers.jellyfin.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
       # Http Services

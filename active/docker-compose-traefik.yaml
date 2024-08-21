@@ -47,10 +47,10 @@ services:
       - --entrypoints.websecure.http.tls.options=tls-opts@file
       # Add dns-cloudflare as default certresolver for all services. Also enables TLS and no need to specify on individual services
       - --entrypoints.websecure.http.tls.certresolver=dns-cloudflare
-      - --entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME_1
-      - --entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME_1
-      # - --entrypoints.websecure.http.tls.domains[1].main=$DOMAINNAME_1
-      # - --entrypoints.websecure.http.tls.domains[1].sans=*.$DOMAINNAME_1
+      - --entrypoints.websecure.http.tls.domains[0].main=$DOMAINNAME
+      - --entrypoints.websecure.http.tls.domains[0].sans=*.$DOMAINNAME
+      # - --entrypoints.websecure.http.tls.domains[1].main=$DOMAINNAME
+      # - --entrypoints.websecure.http.tls.domains[1].sans=*.$DOMAINNAME
       # - --entrypoints.websecure.http.tls.domains[2].main=$DOMAINNAME_2 # Pulls main cert for third domain
       # - --entrypoints.websecure.http.tls.domains[2].sans=*.$DOMAINNAME_2 # Pulls wildcard cert for third domain
       - --providers.file.directory=/rules # Load dynamic configuration from one or more .toml or .yml files in a directory
@@ -74,7 +74,7 @@ services:
       # - --metrics.influxdb2.addrouterslabels=true
       # - --metrics.influxdb2.addServicesLabels=true
       # - --metrics.influxdb2.pushInterval=30s
-      # - --metrics.influxdb2.additionallabels.host=$DOMAINNAME_HS
+      # - --metrics.influxdb2.additionallabels.host=$DOMAINNAME
     #healthcheck:
     #  test: ["CMD", "traefik", "healthcheck", "--ping"]
     #  interval: 5s
@@ -101,8 +101,8 @@ services:
       - TZ=$TZ
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - HTPASSWD_FILE=/run/secrets/basic_auth_credentials # HTTP Basic Auth Credentials
-      - DOMAINNAME_HS # Passing the domain name to traefik container to be able to use the variable in rules.
-      - DOMAINNAME_1 # Additional Domain variable passthrough to container
+      - DOMAINNAME # Passing the domain name to traefik container to be able to use the variable in rules.
+      - DOMAINNAME # Additional Domain variable passthrough to container
       # - DOMAINNAME_AT # Additional Domain variable passthrough to container
     secrets:
       - cf_dns_api_token
@@ -112,11 +112,11 @@ services:
       - "traefik.enable=true"
       # HTTP Routers
       - "traefik.http.routers.traefik-rtr.entrypoints=websecure"
-      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.$DOMAINNAME_1`)"
+      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.$DOMAINNAME`)"
       # Services - API
       - "traefik.http.routers.traefik-rtr.service=api@internal"
       # Healthcheck/ping
-      #- "traefik.http.routers.ping.rule=Host(`traefik.$DOMAINNAME_HS`) && Path(`/ping`)"
+      #- "traefik.http.routers.ping.rule=Host(`traefik.$DOMAINNAME`) && Path(`/ping`)"
       #- "traefik.http.routers.ping.tls=true"
       #- "traefik.http.routers.ping.service=ping@internal"
       # Middlewares

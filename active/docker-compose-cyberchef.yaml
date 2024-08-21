@@ -12,7 +12,7 @@ services:
         - "traefik.enable=true"
         # HTTP Routers
         - "traefik.http.routers.cyberchef-rtr.entrypoints=websecure"
-        - "traefik.http.routers.cyberchef-rtr.rule=Host(`cyberchef.$DOMAINNAME_HS`)"
+        - "traefik.http.routers.cyberchef-rtr.rule=Host(`cyberchef.$DOMAINNAME`)"
         # Middlewares
         - "traefik.http.routers.cyberchef-rtr.middlewares=chain-oauth@file"
         # HTTP Services

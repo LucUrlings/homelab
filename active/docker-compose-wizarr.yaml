@@ -11,7 +11,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers Auth
       - "traefik.http.routers.wizarr-rtr.entrypoints=websecure"
-      - "traefik.http.routers.wizarr-rtr.rule=Host(`wizarr.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.wizarr-rtr.rule=Host(`wizarr.$DOMAINNAME`)"
       # Middlewares
       - "traefik.http.routers.wizarr-rtr.middlewares=chain-no-auth@file"
       # HTTP Services

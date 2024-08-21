@@ -12,7 +12,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers
       - "traefik.http.routers.gatus-rtr.entrypoints=websecure"
-      - "traefik.http.routers.gatus-rtr.rule=Host(`gatus.$DOMAINNAME_HS`) || Host(`status.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.gatus-rtr.rule=Host(`gatus.$DOMAINNAME`) || Host(`status.$DOMAINNAME`)"
       # Middlewares
       - "traefik.http.routers.gatus-rtr.middlewares=chain-no-auth@file"
       # HTTP Services

@@ -50,67 +50,22 @@ include:
   # - $USERDIR/docker/homelab/active/docker-compose-adguard.yaml
 
   - $USERDIR/docker/homelab/active/docker-compose-timemachine.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-tubesync.yaml
-
-  # CORE
+  - $USERDIR/docker/homelab/active/docker-compose-tubesync.yaml
   - $USERDIR/docker/homelab/active/docker-compose-traefik.yaml
   - $USERDIR/docker/homelab/active/docker-compose-socket-proxy.yaml
   - $USERDIR/docker/homelab/active/docker-compose-oauth.yaml
   - $USERDIR/docker/homelab/active/docker-compose-wizarr.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-authelia.yaml
-  # SECURITY
-  # - $USERDIR/docker/homelab/active/docker-compose-crowdsec.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-traefik-bouncer.yaml
-  # FRONTEND
+  
   - $USERDIR/docker/homelab/active/docker-compose-jellyfin.yaml
   - $USERDIR/docker/homelab/active/docker-compose-jellyseer.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-autoindex.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-homepage.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-phpmyadmin.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-sitespeed.yaml
   - $USERDIR/docker/homelab/active/docker-compose-whoami.yaml
-  # DOWNLOADERS
-  # - $USERDIR/docker/homelab/active/docker-compose-qbittorrent.yaml
   - $USERDIR/docker/homelab/active/docker-compose-sabnzbd.yaml
-  # PVRS
+  
   - $USERDIR/docker/homelab/active/docker-compose-sonarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose-readarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose-radarr.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-audiobookshelf.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-lidarr.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-bazarr.yaml
-  # COMPLEMENTARY APPS
+
   - $USERDIR/docker/homelab/active/docker-compose-prowlarr.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-notifiarr.yaml
-  # MONITORING
-  # - $USERDIR/docker/homelab/active/docker-compose-grafana.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-scrutiny.yaml
-  # ADMIN
-  # - $USERDIR/docker/homelab/active/docker-compose-guacamole.yaml
   - $USERDIR/docker/homelab/active/docker-compose-it-tools.yaml
   - $USERDIR/docker/homelab/active/docker-compose-cyberchef.yaml
-  # UTILITIES
-  # - $USERDIR/docker/homelab/active/docker-compose-firefly.yaml
-  # FILE MANAGEMENT
-  # - $USERDIR/docker/homelab/active/docker-compose-vscode.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-makemkv.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-mkvtoolnix.yaml
-  # NETWORK
-  # - $USERDIR/docker/homelab/active/docker-compose-gluetun.yaml
-  # MAINTENANCE
-  # - $USERDIR/docker/homelab/active/docker-compose-docker-gc.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-deunhealth.yaml
-  # uninterested
-  # - $USERDIR/docker/homelab/active/docker-compose-radarr-exporter.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-sonarr-exporter.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-lidarr-exporter.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-prowlarr-exporter.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-sabnzbd-exporter.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-kasm.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-picard.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-jdownloader.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-firefox.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-node-exporter.yaml
-  # Archived:
-  # - $USERDIR/docker/homelab/active/docker-compose-dockge.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-dozzle.yaml
+

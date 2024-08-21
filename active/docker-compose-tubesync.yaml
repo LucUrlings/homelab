@@ -16,7 +16,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers Auth
       - "traefik.http.routers.tubesync-rtr.entrypoints=websecure"
-      - "traefik.http.routers.tubesync-rtr.rule=Host(`tubesync.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.tubesync-rtr.rule=Host(`tubesync.$DOMAINNAME`)"
       - "traefik.http.routers.tubesync-rtr.priority=99"
       # Middlewares
       - "traefik.http.routers.tubesync-rtr.middlewares=chain-oauth@file"

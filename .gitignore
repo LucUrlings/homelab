@@ -6,3 +6,6 @@ mnt-storage/
 .idea/
 
 .env
+
+appdata/tubesync/
+appdata/tubesync/db.sqlite3

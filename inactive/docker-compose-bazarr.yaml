@@ -23,7 +23,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers Auth
       - "traefik.http.routers.bazarr-rtr.entrypoints=websecure"
-      - "traefik.http.routers.bazarr-rtr.rule=Host(`bazarr.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.bazarr-rtr.rule=Host(`bazarr.$DOMAINNAME`)"
       # Middlewares
       - "traefik.http.routers.bazarr-rtr.middlewares=chain-oauth@file"
       # - "traefik.http.routers.bazarr-rtr.middlewares=chain-basic-auth@file" # For Basic HTTP Authentication

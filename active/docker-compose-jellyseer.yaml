@@ -16,7 +16,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers
       - "traefik.http.routers.jellyseerr.entrypoints=websecure"
-      - "traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.$DOMAINNAME_1`)"
+      - "traefik.http.routers.jellyseerr.rule=Host(`jellyseerr.$DOMAINNAME`)"
       # Middlewares
       # - "traefik.http.routers.jellyseerr.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
       # Http Services

@@ -16,7 +16,7 @@ services:
       - "traefik.enable=true"
       # HTTP Routers
       - "traefik.http.routers.scrutiny-rtr.entrypoints=websecure"
-      - "traefik.http.routers.scrutiny-rtr.rule=Host(`scrutiny.$DOMAINNAME_HS`)"
+      - "traefik.http.routers.scrutiny-rtr.rule=Host(`scrutiny.$DOMAINNAME`)"
       # Middlewares
       - "traefik.http.routers.scrutiny-rtr.middlewares=chain-oauth@file"
       # HTTP Services

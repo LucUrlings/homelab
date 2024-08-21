@@ -1,0 +1,41 @@
+services:
+  mealie:
+    container_name: mealie
+    image: hkotel/mealie:v1.11.0
+    restart: unless-stopped
+    volumes:
+      - $DOCKERDIR/appdata/mealie:/app/data/
+    environment:
+      ALLOW_SIGNUP: "false"
+      LOG_LEVEL: "DEBUG"
+
+      DB_ENGINE: sqlite # Optional: 'sqlite', 'postgres'
+      # =====================================
+      # Postgres Config
+      POSTGRES_USER: mealie
+      POSTGRES_PASSWORD: mealie
+      POSTGRES_SERVER: postgres
+      POSTGRES_PORT: 5432
+      POSTGRES_DB: mealie
+
+      # =====================================
+      # Email Configuration
+      # SMTP_HOST=
+      # SMTP_PORT=587
+      # SMTP_FROM_NAME=Mealie
+      # SMTP_AUTH_STRATEGY=TLS # Options: 'TLS', 'SSL', 'NONE'
+      # SMTP_FROM_EMAIL=
+      # SMTP_USER=
+      # SMTP_PASSWORD=
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.mealie-rtr.entrypoints=websecure"
+      - "traefik.http.routers.mealie-rtr.rule=Host(`mealie.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.mealie-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.mealie-rtr.service=mealie-svc"
+      - "traefik.http.services.mealie-svc.loadbalancer.server.port=9000"
