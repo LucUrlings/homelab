@@ -6,12 +6,11 @@ services:
     networks:
       - t3_proxy
       - socket_proxy
-    # devices:
-      # - /dev/dri:/dev/dri # for harware transcoding
     environment:
       - PUID=${PUID} # default user id, defined in .env
       - PGID=${PGID} # default group id, defined in .env
       - TZ=${TZ} # timezone, defined in .env
+      - DOCKER_MODS=linuxserver/mods:jellyfin-opencl-intel
     devices:
       - /dev/dri:/dev/dri
     volumes:
