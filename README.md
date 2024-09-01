@@ -22,10 +22,6 @@ Here’s a sneak peek into the tech running the show:
 - **Role:** Service Monitoring
 - **Why It’s Awesome:** Gatus is the wise old sage that keeps an eye on all my services. If something goes wrong, Gatus will let me know before anyone else!
 
-### 🎧 Audiobookshelf: The Bookworm’s Haven
-- **Role:** Audiobook Server
-- **Why It’s Awesome:** Whether I’m on a long drive or just chilling at home, Audiobookshelf keeps my audiobook collection organized and accessible.
-
 ### 🧙‍♂️ CyberChef: The Data Alchemist
 - **Role:** Cyber Swiss Army Knife
 - **Why It’s Awesome:** Need to manipulate, encode, or analyze data? CyberChef is the wizard that can turn raw data into gold.
@@ -63,7 +59,7 @@ Here’s a sneak peek into the tech running the show:
 1. **Traffic Control:** Traefik handles all incoming requests and routes them to the appropriate service.
 2. **Security & DNS:** Cloudflare provides an extra layer of security and manages DNS, keeping everything running smoothly and securely.
 3. **Service Monitoring:** Gatus keeps a watchful eye on all services, making sure they’re up and running.
-4. **Media Magic:** Jellyfin, Jellyseerr, Radarr, Sonarr, Lidarr, and Bazarr team up to manage and serve all my media content.
+4. **Media Magic:** Jellyfin, Jellyseerr, Radarr and Sonarr team up to manage and serve all my media content.
 5. **Utility Power:** Portainer manages my Docker containers, AdGuard blocks unwanted ads, and CyberChef handles any data manipulation tasks.
 
 ## 🎉 The Endgame
