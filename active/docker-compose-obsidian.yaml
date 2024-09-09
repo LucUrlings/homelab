@@ -1,0 +1,32 @@
+services:
+  obsidian:
+    image: lscr.io/linuxserver/obsidian:1.6.7
+    container_name: obsidian
+    security_opt:
+      - seccomp:unconfined #optional
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    volumes:
+      - $DOCKERDIR/appdata/obsidian:/config
+    # ports:
+    #   - 3000:3000
+    #   - 3001:3001
+    devices:
+      - /dev/dri:/dev/dri #optional
+    shm_size: "1gb"
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.obsidian-rtr.entrypoints=websecure"
+      - "traefik.http.routers.obsidian-rtr.rule=Host(`obsidian.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.obsidian-rtr.middlewares=chain-oauth@file"
+      # - "traefik.http.routers.obsidian-rtr.middlewares=chain-basic-auth@file" # For Basic HTTP Authentication
+      # HTTP Services
+      - "traefik.http.routers.obsidian-rtr.service=obsidian-svc"
+      - "traefik.http.services.obsidian-svc.loadbalancer.server.port=3000"
