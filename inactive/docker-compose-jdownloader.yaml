@@ -1,7 +1,7 @@
 services:
   # jDownloader - Download management
   jdownloader:
-    image: jlesage/jdownloader-2:v24.08.1
+    image: jlesage/jdownloader-2:v24.09.1
     container_name: jdownloader
     security_opt:
       - no-new-privileges:true
