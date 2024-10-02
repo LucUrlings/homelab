@@ -2,7 +2,7 @@ services:
   # Authelia (Lite) - Self-Hosted Single Sign-On and Two-Factor Authentication
   authelia:
     container_name: authelia
-    image: authelia/authelia:4.38.12
+    image: authelia/authelia:4.38.15
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
