@@ -1,0 +1,31 @@
+services:
+  home-assistant:
+    image: homeassistant/home-assistant:2024.10
+    container_name: home-assistant
+    restart: unless-stopped
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    volumes:
+      - $DOCKERDIR/appdata/home-assistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.home-assistant.entrypoints=websecure"
+    #   - "traefik.http.routers.home-assistant.rule=Host(`home-assistant.$DOMAINNAME`) || Host(`hass.$DOMAINNAME`)"
+    #   - "traefik.http.routers.home-assistant-rtr.service=home-assistant-svc"
+    #   - "traefik.http.services.home-assistant-svc.loadbalancer.server.port=8123"
+    # labels:
+    #   - "traefik.enable=true"
+    #   - "traefik.http.routers.home-assistant-rtr.entrypoints=websecure"
+    #   - "traefik.http.routers.home-assistant-rtr.rule=Host(`home-assistant.$DOMAINNAME`) || Host(`hass.$DOMAINNAME`) || Host(`ha.$DOMAINNAME`)"
+    #   - "traefik.http.routers.home-assistant-rtr.service=home-assistant-svc"
+    #   - "traefik.http.services.home-assistant-svc.loadbalancer.server.url=http://192.168.1.198:8123"
+    #   - "traefik.http.services.home-assistant-svc.loadbalancer.server.port=8123"
+    privileged: true
+    network_mode: "host"
+    # networks:
+    #   - t3_proxy
+    #   - socket_proxy
+      

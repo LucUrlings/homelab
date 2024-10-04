@@ -44,13 +44,12 @@ secrets:
 
 include:
   # These are enabled but wont be turned off with restarts:
-  # - $USERDIR/docker/homelab/active/docker-compose-gatus.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-portainer.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose-ddclient.yaml
+  - $USERDIR/docker/homelab/active/docker-compose-gatus.yaml
+  - $USERDIR/docker/homelab/active/docker-compose-portainer.yaml
+  - $USERDIR/docker/homelab/active/docker-compose-ddclient.yaml
   # - $USERDIR/docker/homelab/active/docker-compose-adguard.yaml
-
-  # - $USERDIR/docker/homelab/active/docker-compose-obsidian.yaml
   
+  - $USERDIR/docker/homelab/active/docker-compose-home-assistant.yaml
   - $USERDIR/docker/homelab/active/docker-compose-timemachine.yaml
   - $USERDIR/docker/homelab/active/docker-compose-tubesync.yaml
   - $USERDIR/docker/homelab/active/docker-compose-traefik.yaml

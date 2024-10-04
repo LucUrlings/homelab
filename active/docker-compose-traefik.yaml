@@ -97,13 +97,12 @@ services:
       # - /var/run/docker.sock:/var/run/docker.sock:ro # Enable if not using Socket Proxy
       - $DOCKERDIR/appdata/traefik3/acme/acme.json:/acme.json # Certs File
       - $DOCKERDIR/logs/traefik:/logs # Traefik logs
+      # - $DOCKERDIR/appdata/traefik3/traefik.yaml:/etc/traefik/traefik.yaml
     environment:
       - TZ=$TZ
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - HTPASSWD_FILE=/run/secrets/basic_auth_credentials # HTTP Basic Auth Credentials
       - DOMAINNAME # Passing the domain name to traefik container to be able to use the variable in rules.
-      - DOMAINNAME # Additional Domain variable passthrough to container
-      # - DOMAINNAME_AT # Additional Domain variable passthrough to container
     secrets:
       - cf_dns_api_token
       - basic_auth_credentials
