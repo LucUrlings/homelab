@@ -1,0 +1,21 @@
+services:
+  home-assistant:
+    image: homeassistant/home-assistant:2024.10
+    container_name: home-assistant
+    restart: unless-stopped
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    volumes:
+      - $DOCKERDIR/appdata/home-assistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    # labels:
+    # The config for this specific container are found in dynamic.yaml.
+    # Reason for this being, for home-assistant to be available on the network at home, it needs to be run in network_mode: host. This cant be paired with traefik3-networks
+    privileged: true
+    network_mode: "host"
+    # networks:
+    #   - t3_proxy
+    #   - socket_proxy
+      
