@@ -13,16 +13,16 @@ services:
     #   - "8081:8080" # Explosed via gluetun. 8081 because crowdsec is using port 8080
     volumes:
       - $DOCKERDIR/appdata/qbittorrent:/config
-      - $DATADIR:/data/downloads # Ensure that downloads folder is set to /data/downloads in qBittorrent
+      - $DATADIR/qbittorrent:/data/downloads # Ensure that downloads folder is set to /data/downloads in qBittorrent
     environment:
       TZ: $TZ
       PUID: $PUID
       PGID: $PGID
       UMASK_SET: 002
     healthcheck: # https://github.com/qdm12/gluetun/issues/641#issuecomment-933856220
-      test: "curl -sf https://example.com  || exit 1"
-      interval: 1m
-      timeout: 10s
-      retries: 1
+      test: ["CMD", "curl", "-f", "https://cloudflare.com"]
+      interval: 5m
+      timeout: 30s
+      retries: 5
     labels: # Traefik labels added via glueten
       - "deunhealth.restart.on.unhealthy=true"

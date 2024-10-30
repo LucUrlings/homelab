@@ -47,7 +47,7 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.gatus.yaml
   - $USERDIR/docker/homelab/active/docker-compose.portainer.yaml
   - $USERDIR/docker/homelab/active/docker-compose.ddclient.yaml
-  - $USERDIR/docker/homelab/active/docker-compose-adguard.yaml
+  # - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.home-assistant.yaml
   - $USERDIR/docker/homelab/active/docker-compose.actual-server.yaml
@@ -58,6 +58,10 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.socket-proxy.yaml
   - $USERDIR/docker/homelab/active/docker-compose.oauth.yaml
   - $USERDIR/docker/homelab/active/docker-compose.wizarr.yaml
+
+  - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.gluetun.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.flaresolverr.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.jellyfin.yaml
   - $USERDIR/docker/homelab/active/docker-compose.jellyseer.yaml

@@ -1,0 +1,12 @@
+services:
+    flaresolverr:
+        image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+        container_name: flaresolverr
+        restart: unless-stopped
+        environment:
+            - LOG_LEVEL=info
+        ports:
+            - '8191:8191'
+        networks:
+            - t3_proxy
+            - socket_proxy

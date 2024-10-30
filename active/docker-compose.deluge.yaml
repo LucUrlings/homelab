@@ -1,0 +1,19 @@
+services:
+  deluge:
+    image: lscr.io/linuxserver/deluge:2.1.1
+    container_name: deluge
+    network_mode: "service:gluetun"
+    environment:
+      PUID: $PUID
+      PGID: $PGID
+      TZ: $TZ
+      DELUGE_LOGLEVEL: info #optional
+    volumes:
+      - $DOCKERDIR/appdata/deluge:/config
+      - $DATADIR/torrents:/downloads
+    # ports:
+    #   - 8112:8112
+    #   - 6881:6881
+    #   - 6881:6881/udp
+    #   - 58846:58846 #optional
+    restart: unless-stopped
