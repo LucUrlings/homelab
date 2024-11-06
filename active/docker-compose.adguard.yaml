@@ -1,7 +1,7 @@
 services:
   adguard:
     container_name: adguard
-    image: adguard/adguardhome:v0.107.53
+    image: adguard/adguardhome:v0.107.54
     restart: unless-stopped
     ports:
       - "3000:3000/tcp"  # Web UI
