@@ -1,6 +1,6 @@
 services:
   obsidian:
-    image: lscr.io/linuxserver/obsidian:1.7.5
+    image: lscr.io/linuxserver/obsidian:1.7.7
     container_name: obsidian
     security_opt:
       - seccomp:unconfined #optional
