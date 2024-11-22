@@ -65,7 +65,6 @@ include:
 
   - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
   - $USERDIR/docker/homelab/active/docker-compose.gluetun.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose.vpn.yaml
   - $USERDIR/docker/homelab/active/docker-compose.flaresolverr.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.jellyfin.yaml
@@ -76,7 +75,6 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.lazylibrarian.yaml
   - $USERDIR/docker/homelab/active/docker-compose.kavita.yaml
   - $USERDIR/docker/homelab/active/docker-compose.calibre.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.calibre-web.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.sonarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.readarr.yaml
