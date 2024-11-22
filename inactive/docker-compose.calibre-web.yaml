@@ -1,0 +1,32 @@
+services:
+  calibre-web:
+    image: lscr.io/linuxserver/calibre-web:0.6.23
+    container_name: calibre-web
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      # - DOCKER_MODS=linuxserver/mods:universal-calibre #optional
+      # - OAUTHLIB_RELAX_TOKEN_SCOPE=1 #optional
+    volumes:
+      - $DOCKERDIR/appdata/calibre-web:/config
+      - $DATADIR/media/books:/books
+    # ports:
+    #   - 8083:8083
+    depends_on:
+      - calibre                     # Ensures Calibre starts before Calibre-Web
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - socket_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.calibre-web-rtr.entrypoints=websecure"
+      - "traefik.http.routers.calibre-web-rtr.rule=Host(`calibre-web.$DOMAINNAME`) || Host(`cw.$DOMAINNAME`)"
+      - "traefik.http.routers.calibre-web-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.calibre-web-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.calibre-web-rtr.service=calibre-web-svc"
+      - "traefik.http.services.calibre-web-svc.loadbalancer.server.port=8083"

@@ -1,0 +1,29 @@
+services:
+  vpn:
+    container_name: vpn
+    image: dperson/openvpn-client:latest
+    # profiles:
+    #   - all
+    #   - media
+    cap_add:
+      - net_admin # required to modify network interfaces
+    restart: unless-stopped
+    volumes:
+      - /dev/net:/dev/net:z # tun device
+      - $DOCKERDIR/appdata/vpn:/vpn # OpenVPN configuration
+    security_opt:
+      - label:disable
+    ports:
+      - 8112:8112 # port for deluge web UI to be reachable from local network
+      # - 8090:8080 # port for qbittorrent web UI to be reachable from local network
+    command: '-f "" -r 192.168.1.0/24' # enable firewall and route local network traffic
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.vpn-deluge-rtr.entrypoints=websecure"
+      - "traefik.http.routers.vpn-deluge-rtr.rule=Host(`deluge.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.vpn-deluge-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.vpn-deluge-rtr.service=vpn-svc"
+      - "traefik.http.services.vpn-svc.loadbalancer.server.port=8112"
