@@ -1,0 +1,31 @@
+services:
+  lazylibrarian:
+    image: lscr.io/linuxserver/lazylibrarian:latest
+    container_name: lazylibrarian
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+      - DOCKER_MODS=linuxserver/mods:universal-calibre|linuxserver/mods:lazylibrarian-ffmpeg #optional
+    volumes:
+      - $DOCKERDIR/appdata/lazylibrarian:/config
+      - $DATADIR/torrents/complete:/downloads/torrents
+      - $DATADIR/usenet/complete/audio:/downloads/usenet/audio
+      - $DATADIR/usenet/complete/books:/downloads/usenet/books
+      - $DATADIR/media/books:/books #optional
+      - $DATADIR/media/audiobooks:/audiobooks #optional
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - socket_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.lazylibrarian-rtr.entrypoints=websecure"
+      - "traefik.http.routers.lazylibrarian-rtr.rule=Host(`lazylibrarian.$DOMAINNAME`) || Host(`ll.$DOMAINNAME`)"
+      - "traefik.http.routers.lazylibrarian-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.lazylibrarian-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.lazylibrarian-rtr.service=lazylibrarian-svc"
+      - "traefik.http.services.lazylibrarian-svc.loadbalancer.server.port=5299"

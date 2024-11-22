@@ -1,0 +1,13 @@
+services:
+  tailscale:
+    image: tailscale/tailscale
+    container_name: tailscale
+    hostname: Zephyr
+    devices:
+      - /dev/net/tun
+    cap_add:
+      - net_admin
+    network_mode: "host"
+    environment:
+      - TS_AUTH_KEY=${TS_AUTH_KEY}
+    restart: always

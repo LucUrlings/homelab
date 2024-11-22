@@ -2,12 +2,13 @@ services:
   deluge:
     image: lscr.io/linuxserver/deluge:2.1.1
     container_name: deluge
-    network_mode: "service:gluetun"
+    network_mode: service:gluetun
+    # network_mode: service:vpn
     environment:
-      PUID: $PUID
-      PGID: $PGID
-      TZ: $TZ
-      DELUGE_LOGLEVEL: info #optional
+      - PUID=${PUID} # default user id, defined in .env
+      - PGID=${PGID} # default group id, defined in .env
+      - TZ=${TZ} # timezone, defined in .env
+      - DELUGE_LOGLEVEL=info #optional
     volumes:
       - $DOCKERDIR/appdata/deluge:/config
       - $DATADIR/torrents:/downloads
@@ -17,3 +18,24 @@ services:
     #   - 6881:6881/udp
     #   - 58846:58846 #optional
     restart: unless-stopped
+
+
+# services:
+#   deluge:
+#     container_name: deluge
+#     image: linuxserver/deluge:latest
+#     # profiles:
+#     #   - all
+#     #   - media
+#     restart: unless-stopped
+#     # networks:
+#     #   - t3_proxy
+#     #   - socket_proxy
+#     network_mode: service:vpn # run on the vpn network
+#     environment:
+#       - PUID=${PUID} # default user id, defined in .env
+#       - PGID=${PGID} # default group id, defined in .env
+#       - TZ=${TZ} # timezone, defined in .env
+#     volumes:
+#       - $DOCKERDIR/appdata/deluge:/config
+#       - $DATADIR/torrents:/downloads

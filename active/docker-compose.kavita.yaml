@@ -1,0 +1,28 @@
+services:
+  kavita:
+    image: lscr.io/linuxserver/kavita:0.8.3
+    container_name: kavita
+    environment:
+      - PUID=${PUID}
+      - PGID=${PGID}
+      - TZ=${TZ}
+    volumes:
+      - $DOCKERDIR/appdata/kavita:/config
+      - $DATADIR/media/books:/data
+    # ports:
+    #   - 5000:5000
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - socket_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.kavita-rtr.entrypoints=websecure"
+      - "traefik.http.routers.kavita-rtr.rule=Host(`kavita.$DOMAINNAME`)"
+      - "traefik.http.routers.kavita-rtr.priority=99"
+      # Middlewares
+      # - "traefik.http.routers.kavita-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.kavita-rtr.service=kavita-svc"
+      - "traefik.http.services.kavita-svc.loadbalancer.server.port=5000"

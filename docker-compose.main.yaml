@@ -47,7 +47,11 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.gatus.yaml
   - $USERDIR/docker/homelab/active/docker-compose.portainer.yaml
   - $USERDIR/docker/homelab/active/docker-compose.ddclient.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.tailscale.yaml
+
+
+  - $USERDIR/docker/homelab/active/docker-compose.gekko.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.home-assistant.yaml
   - $USERDIR/docker/homelab/active/docker-compose.actual-server.yaml
@@ -61,12 +65,18 @@ include:
 
   - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
   - $USERDIR/docker/homelab/active/docker-compose.gluetun.yaml
+  # - $USERDIR/docker/homelab/active/docker-compose.vpn.yaml
   - $USERDIR/docker/homelab/active/docker-compose.flaresolverr.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.jellyfin.yaml
   - $USERDIR/docker/homelab/active/docker-compose.jellyseer.yaml
   - $USERDIR/docker/homelab/active/docker-compose.whoami.yaml
   - $USERDIR/docker/homelab/active/docker-compose.sabnzbd.yaml
+
+  - $USERDIR/docker/homelab/active/docker-compose.lazylibrarian.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.kavita.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.calibre.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.calibre-web.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.sonarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.readarr.yaml
@@ -75,4 +85,3 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.prowlarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.it-tools.yaml
   - $USERDIR/docker/homelab/active/docker-compose.cyberchef.yaml
-

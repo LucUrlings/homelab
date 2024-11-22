@@ -15,29 +15,29 @@ services:
       - NET_ADMIN
     devices:
       - /dev/net/tun
-    ports:
-      - 6881:6881
-      - 6881:6881/udp
+    # ports:
+      # - 6881:6881
+      # - 6881:6881/udp
       # - "8112:8112" # Exposing qBittorrent through Docker Host LAN IP
     # #   - 8888:8888/tcp # HTTP proxy
     # #   - 8388:8388/tcp # Shadowsocks
     # #   - 8388:8388/udp # Shadowsocks
     volumes:
       - $DOCKERDIR/appdata/gluetun:/gluetun
-      - $DOCKERDIR/appdata/gluetun-wg/wg0.conf:/gluetun/wireguard/wg0.conf
+      # - $DOCKERDIR/appdata/gluetun-wg/wg0.conf:/gluetun/wireguard/wg0.conf
     environment:
       - TZ=${TZ}
       # Wireguard
-      - VPN_SERVICE_PROVIDER=custom
+      - VPN_SERVICE_PROVIDER=fastestvpn
       - VPN_TYPE=wireguard
-      # - WIREGUARD_PRIVATE_KEY=${GLUETUN_WIREGUARD_PRIVATE_KEY}
-      # - WIREGUARD_ADDRESSES=${GLUETUN_WIREGUARD_ADDRESSES}
-      # - SERVER_COUNTRIES=Netherlands
+      - WIREGUARD_PRIVATE_KEY=${GLUETUN_WIREGUARD_PRIVATE_KEY}
+      - WIREGUARD_ADDRESSES=${GLUETUN_WIREGUARD_ADDRESSES}
+      - SERVER_COUNTRIES=Netherlands
       # # OpenVPN
       # VPN_SERVICE_PROVIDER: nordvpn
-      # VPN_TYPE: openvpn
-      # OPENVPN_USER: $NORDVPN_USERNAME
-      # OPENVPN_PASSWORD: $NORDVPN_PASSWORD
+      # - VPN_TYPE=openvpn
+      # - OPENVPN_USER=${GLUETUN_FASTESTVPN_OPENVPN_USERNAME}
+      # - OPENVPN_PASSWORD=${GLUETUN_FASTESTVPN_OPENVPN_PASSWORD}
       - DNS=192.168.1.198:53
     labels:
       - "traefik.enable=true"
