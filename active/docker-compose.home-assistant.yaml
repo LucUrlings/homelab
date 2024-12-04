@@ -1,6 +1,6 @@
 services:
   home-assistant:
-    image: homeassistant/home-assistant:2024.11
+    image: homeassistant/home-assistant:2024.12
     container_name: home-assistant
     restart: unless-stopped
     environment:
