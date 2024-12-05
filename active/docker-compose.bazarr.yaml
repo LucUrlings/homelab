@@ -13,8 +13,7 @@ services:
       - "6767:6767"
     volumes:
       - $DOCKERDIR/appdata/bazarr:/config
-      - $DATADIR/shows:/data/media/shows
-      - $DATADIR/movies:/data/media/movies
+      - $DATADIR:/data
     environment:
       TZ: $TZ
       PUID: $PUID
