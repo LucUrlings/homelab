@@ -3,7 +3,7 @@ services:
     image: ghcr.io/lucurlings/gekko-backtesting:latest
     container_name: gekko
     volumes:
-      - $DOCKERDIR/appdata/gekko-history:/usr/src/app/history
+      - $DATADIR/gekko/history:/usr/src/app/history
       - $DOCKERDIR/appdata/gekko-config/config.js:/usr/src/app/config.js
     links:
       - redis
