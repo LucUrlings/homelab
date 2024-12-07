@@ -25,7 +25,7 @@ services:
 
   nextcloud-maria-db:
     container_name: nextcloud-db
-    image: mariadb:10.5 
+    image: mariadb:10.11 
     env_file: ${DOCKERDIR}/appdata/nextcloud/nextcloud.env
     networks:
       - nextcloud_internal
@@ -34,7 +34,7 @@ services:
 
   nextcloud-maria-db-backup:
     container_name: nextcloud-db-backup
-    image: mariadb:10.5
+    image: mariadb:10.11
     env_file: ${DOCKERDIR}/appdata/nextcloud/nextcloud-db-backup.env
     volumes:
       - ${INTERNALDIR}/nextcloud/database-dump:/dump
