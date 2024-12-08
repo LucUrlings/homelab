@@ -1,0 +1,21 @@
+services:
+  open-webui:
+    container_name: open-webui
+    image: ghcr.io/open-webui/open-webui:v0.4.8
+    networks:
+      - t3_proxy
+    environment:
+      - OLLAMA_BASE_URL=https://ollama.lucurlings.nl
+    volumes:
+      - ${INTERNALDIR}/ollama:/app/backend/data
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.open-webui.entrypoints=websecure"
+      - "traefik.http.routers.open-webui.rule=Host(`open-webui.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.jellyfin.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.open-webui.service=open-webui-svc"
+      - "traefik.http.services.open-webui-svc.loadbalancer.server.port=8080"

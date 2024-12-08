@@ -50,6 +50,10 @@ include:
   # - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
   - $USERDIR/docker/homelab/active/docker-compose.tailscale.yaml
 
+  - $USERDIR/docker/homelab/active/docker-compose.anythingllm.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.ollama.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.open-webui.yaml
+
   - $USERDIR/docker/homelab/active/docker-compose.nextcloud.yaml
 
   - $USERDIR/docker/homelab/active/docker-compose.bazarr.yaml

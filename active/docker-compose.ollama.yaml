@@ -1,0 +1,21 @@
+services:
+  ollama:
+    image: ollama/ollama:0.5.1
+    container_name: ollama
+    networks:
+      - t3_proxy
+    volumes:
+      - ${INTERNALDIR}/ollama:/root/.ollama
+    ports:
+      - '11434:11434'
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.ollama.entrypoints=websecure"
+      - "traefik.http.routers.ollama.rule=Host(`ollama.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.jellyfin.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.ollama.service=ollama-svc"
+      - "traefik.http.services.ollama-svc.loadbalancer.server.port=11434"
