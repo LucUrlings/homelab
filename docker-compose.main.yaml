@@ -54,6 +54,8 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.ollama.yaml
   - $USERDIR/docker/homelab/active/docker-compose.open-webui.yaml
 
+  - $USERDIR/docker/homelab/active/docker-compose.changedetectionio.yaml
+
   - $USERDIR/docker/homelab/active/docker-compose.nextcloud.yaml
 
   - $USERDIR/docker/homelab/active/docker-compose.bazarr.yaml
