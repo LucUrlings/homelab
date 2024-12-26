@@ -1,7 +1,7 @@
 services:
   # Bazarr - Subtitle Management
   bazarr:
-    image: lscr.io/linuxserver/bazarr:1.4.6-development
+    image: lscr.io/linuxserver/bazarr:1.5.1-development
     container_name: bazarr
     security_opt:
       - no-new-privileges:true
