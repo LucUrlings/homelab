@@ -3,8 +3,6 @@ services:
   portainer:
     container_name: portainer
     image: portainer/portainer-ee:2.25.1 # Use portainer-ce if you do no have a Business Edition license key
-    security_opt:
-      - no-new-privileges:true
     restart: unless-stopped
     # profiles: ["core", "all"]
     networks:

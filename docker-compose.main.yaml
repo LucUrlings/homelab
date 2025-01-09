@@ -64,7 +64,6 @@ include:
   
   - $USERDIR/docker/homelab/active/docker-compose.home-assistant.yaml
   - $USERDIR/docker/homelab/active/docker-compose.actual-server.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.stirling-pdf.yaml
   - $USERDIR/docker/homelab/active/docker-compose.timemachine.yaml
   - $USERDIR/docker/homelab/active/docker-compose.tubesync.yaml
   - $USERDIR/docker/homelab/active/docker-compose.traefik.yaml

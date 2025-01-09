@@ -1,0 +1,28 @@
+services:
+    ersatztv:
+        container_name: ersatztv
+        image: jasongdove/ersatztv:latest-vaapi
+        environment:
+            - PUID=${PUID}
+            - PGID=${PGID}
+            - TZ=${TZ}
+        ports:
+            - 8409:8409
+        volumes:
+            - $DOCKERDIR/appdata/ersatztv:/root/.local/share/ersatztv
+            - $DATADIR/media:/data/media:ro
+        restart: unless-stopped
+        devices:
+            - /dev/dri:/dev/dri
+        networks:
+          - t3_proxy
+        labels:
+          - "traefik.enable=true"
+          # HTTP Routers
+          - "traefik.http.routers.ersatztv.entrypoints=websecure"
+          - "traefik.http.routers.ersatztv.rule=Host(`ersatztv.$DOMAINNAME`)"
+          # Middlewares
+          # - "traefik.http.routers.jellyfin.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+          # Http Services
+          - "traefik.http.routers.ersatztv.service=ersatztv-svc"
+          - "traefik.http.services.ersatztv-svc.loadbalancer.server.port=8409"
