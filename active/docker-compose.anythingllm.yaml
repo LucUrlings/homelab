@@ -1,7 +1,7 @@
 services:
     anythingllm:
         container_name: anythingllm
-        image: mintplexlabs/anythingllm:1.3.0
+        image: mintplexlabs/anythingllm:1.4.0
         networks:
           - t3_proxy
         cap_add:
