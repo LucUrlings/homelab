@@ -1,6 +1,6 @@
 services:
     timemachine:
-      image: mbentley/timemachine:smb-20240811
+      image: mbentley/timemachine:latest
       restart: unless-stopped
       container_name: timemachine
       network_mode: host

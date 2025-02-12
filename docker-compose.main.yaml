@@ -47,7 +47,7 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.gatus.yaml
   - $USERDIR/docker/homelab/active/docker-compose.portainer.yaml
   - $USERDIR/docker/homelab/active/docker-compose.ddclient.yaml
-  # - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
+#  - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
   - $USERDIR/docker/homelab/active/docker-compose.tailscale.yaml
 
   - $USERDIR/docker/homelab/active/docker-compose.anythingllm.yaml
@@ -60,8 +60,7 @@ include:
 
   - $USERDIR/docker/homelab/active/docker-compose.bazarr.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.gekko.yaml
-  
+#  - $USERDIR/docker/homelab/active/docker-compose.gekko.yaml
   - $USERDIR/docker/homelab/active/docker-compose.home-assistant.yaml
   - $USERDIR/docker/homelab/active/docker-compose.actual-server.yaml
   - $USERDIR/docker/homelab/active/docker-compose.timemachine.yaml
