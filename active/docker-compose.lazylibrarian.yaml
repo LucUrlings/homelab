@@ -17,7 +17,6 @@ services:
     restart: unless-stopped
     networks:
       - t3_proxy
-      - socket_proxy
     labels:
       - "traefik.enable=true"
       # HTTP Routers Auth

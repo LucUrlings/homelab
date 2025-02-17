@@ -5,7 +5,6 @@ services:
     restart: unless-stopped
     networks:
       - t3_proxy
-      - socket_proxy
     environment:
       - PUID=${PUID} # default user id, defined in .env
       - PGID=${PGID} # default group id, defined in .env
