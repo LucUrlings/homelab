@@ -2,7 +2,7 @@ services:
 #    https://docs.anythingllm.com/installation-docker/local-docker
     anythingllm:
         container_name: anythingllm
-        image: mintplexlabs/anythingllm:1.7.6
+        image: mintplexlabs/anythingllm:1.7.8
         restart: unless-stopped
         networks:
             - t3_proxy
