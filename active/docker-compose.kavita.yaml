@@ -1,6 +1,6 @@
 services:
   kavita:
-    image: lscr.io/linuxserver/kavita:0.8.5
+    image: lscr.io/linuxserver/kavita:0.8.6
     container_name: kavita
     environment:
       - PUID=${PUID}
