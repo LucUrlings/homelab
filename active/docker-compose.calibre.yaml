@@ -1,6 +1,6 @@
 services:
   calibre:
-    image: lscr.io/linuxserver/calibre:8.3.0
+    image: lscr.io/linuxserver/calibre:8.4.0
     container_name: calibre
     environment:
       - PUID=${PUID}
