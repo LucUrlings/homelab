@@ -1,7 +1,7 @@
 services:
   nextcloud:
     container_name: nextcloud
-    image: nextcloud:31.0.4
+    image: nextcloud:31.0.5
     env_file: ${DOCKERDIR}/appdata/nextcloud/nextcloud.env
     networks:
       - t3_proxy
@@ -62,7 +62,7 @@ services:
 
   nextcloud-cron:
     container_name: nextcloud-cron
-    image: nextcloud:31.0.4
+    image: nextcloud:31.0.5
     volumes:
       - ${DOCKERDIR}/appdata/nextcloud/html:/var/www/html
       - ${DOCKERDIR}/appdata/nextcloud/apps:/var/www/html/custom_apps
