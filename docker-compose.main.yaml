@@ -86,7 +86,10 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.sonarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.readarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.radarr.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.recommendarr.yaml
 
   - $USERDIR/docker/homelab/active/docker-compose.prowlarr.yaml
   - $USERDIR/docker/homelab/active/docker-compose.it-tools.yaml
   - $USERDIR/docker/homelab/active/docker-compose.cyberchef.yaml
+
+  - $USERDIR/docker/homelab/active/docker-compose.mqtt.yaml

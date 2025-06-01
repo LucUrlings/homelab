@@ -3,6 +3,8 @@ services:
     image: linuxserver/jellyfin:10.10.7
     container_name: jellyfin
     restart: unless-stopped
+    group_add:
+      - '993' # render group id. get this by 'getent group render'
     networks:
       - t3_proxy
     environment:
@@ -10,12 +12,13 @@ services:
       - PGID=${PGID} # default group id, defined in .env
       - TZ=${TZ} # timezone, defined in .env
       - DOCKER_MODS=linuxserver/mods:jellyfin-opencl-intel
+      - JELLYFIN_LIBVA_DRIVER_NAME=iHD
     devices:
       - /dev/dri:/dev/dri
     volumes:
       - $DOCKERDIR/appdata/jellyfin:/config
       - $DATADIR/media:/data/media
-      - /dev/shm:/data/transcode # Offload transcoding to RAM if you have enough RAM
+#      - /dev/shm:/data/transcode # Offload transcoding to RAM if you have enough RAM
     labels:
       - "traefik.enable=true"
       # HTTP Routers

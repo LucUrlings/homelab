@@ -1,0 +1,17 @@
+services:
+  # mqtt5 eclipse-mosquitto
+  mqtt5:
+    image: eclipse-mosquitto
+    container_name: mqtt
+    ports:
+      - "1883:1883" #default mqtt port
+      - "9001:9001" #default mqtt port for websockets
+    environment:
+      TZ: $TZ
+      PUID: $PUID
+      PGID: $PGID
+    volumes:
+      - $DOCKERDIR/appdata/mosquitto/config:/mosquitto/config:rw
+      - $DOCKERDIR/appdata/mosquitto/data:/mosquitto/data:rw
+      - $DOCKERDIR/appdata/mosquitto/log:/mosquitto/log:rw
+    restart: unless-stopped
