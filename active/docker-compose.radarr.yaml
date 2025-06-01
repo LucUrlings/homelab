@@ -3,7 +3,7 @@ services:
   # Radarr - Movie management
   # Set url_base in radarr settings if using PathPrefix
   radarr:
-    image: lscr.io/linuxserver/radarr:5.23.3 # latest was causing "Error parsing column 45"
+    image: lscr.io/linuxserver/radarr:5.25.0 # latest was causing "Error parsing column 45"
     container_name: radarr
     restart: unless-stopped
     security_opt:
