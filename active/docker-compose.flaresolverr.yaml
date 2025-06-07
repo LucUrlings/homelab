@@ -1,6 +1,6 @@
 services:
     flaresolverr:
-        image: ghcr.io/flaresolverr/flaresolverr:v3.3.21
+        image: ghcr.io/flaresolverr/flaresolverr:v3.3.24
         container_name: flaresolverr
         restart: unless-stopped
         environment:
