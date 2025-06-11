@@ -70,8 +70,8 @@ include:
   - $USERDIR/docker/homelab/active/docker-compose.oauth.yaml
   - $USERDIR/docker/homelab/active/docker-compose.wizarr.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
   - $USERDIR/docker/homelab/active/docker-compose.gluetun.yaml
+  - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
   - $USERDIR/docker/homelab/active/docker-compose.flaresolverr.yaml
   
   - $USERDIR/docker/homelab/active/docker-compose.jellyfin.yaml
