@@ -1,7 +1,7 @@
 services:
   wizarr:
     container_name: wizarr
-    image: ghcr.io/wizarrrr/wizarr:2025.6.2
+    image: ghcr.io/wizarrrr/wizarr:2025.6.3
     restart: unless-stopped
     volumes:
       - $DOCKERDIR/appdata/wizarr:/data/database
