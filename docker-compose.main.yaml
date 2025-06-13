@@ -44,52 +44,53 @@ secrets:
 
 include:
   # These are enabled but wont be turned off with restarts:
-  - $USERDIR/docker/homelab/active/docker-compose.gatus.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.portainer.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.ddclient.yaml
-#  - $USERDIR/docker/homelab/active/docker-compose.adguard.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.tailscale.yaml
+  - $USERDIR/docker/homelab/active/gatus.yaml
+  - $USERDIR/docker/homelab/active/portainer.yaml
+  - $USERDIR/docker/homelab/active/ddclient.yaml
+#  - $USERDIR/docker/homelab/active/adguard.yaml
+  - $USERDIR/docker/homelab/active/tailscale.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.anythingllm.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.ollama.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.open-webui.yaml
+  - $USERDIR/docker/homelab/active/anythingllm.yaml
+  - $USERDIR/docker/homelab/active/ollama.yaml
+  - $USERDIR/docker/homelab/active/open-webui.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.changedetectionio.yaml
+  - $USERDIR/docker/homelab/active/changedetectionio.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.nextcloud.yaml
+  - $USERDIR/docker/homelab/active/nextcloud.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.bazarr.yaml
+  - $USERDIR/docker/homelab/active/bazarr.yaml
+  - $USERDIR/docker/homelab/active/frigate.yaml
 
-#  - $USERDIR/docker/homelab/active/docker-compose.gekko.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.home-assistant.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.actual-server.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.timemachine.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.tubesync.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.traefik.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.socket-proxy.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.oauth.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.wizarr.yaml
+#  - $USERDIR/docker/homelab/active/gekko.yaml
+  - $USERDIR/docker/homelab/active/home-assistant.yaml
+  - $USERDIR/docker/homelab/active/actual-server.yaml
+  - $USERDIR/docker/homelab/active/timemachine.yaml
+  - $USERDIR/docker/homelab/active/tubesync.yaml
+  - $USERDIR/docker/homelab/active/traefik.yaml
+  - $USERDIR/docker/homelab/active/socket-proxy.yaml
+  - $USERDIR/docker/homelab/active/oauth.yaml
+  - $USERDIR/docker/homelab/active/wizarr.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.gluetun.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.deluge.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.flaresolverr.yaml
+  - $USERDIR/docker/homelab/active/gluetun.yaml
+  - $USERDIR/docker/homelab/active/deluge.yaml
+  - $USERDIR/docker/homelab/active/flaresolverr.yaml
   
-  - $USERDIR/docker/homelab/active/docker-compose.jellyfin.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.jellyseer.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.whoami.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.sabnzbd.yaml
+  - $USERDIR/docker/homelab/active/jellyfin.yaml
+  - $USERDIR/docker/homelab/active/jellyseer.yaml
+  - $USERDIR/docker/homelab/active/whoami.yaml
+  - $USERDIR/docker/homelab/active/sabnzbd.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.lazylibrarian.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.kavita.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.calibre.yaml
+  - $USERDIR/docker/homelab/active/lazylibrarian.yaml
+  - $USERDIR/docker/homelab/active/kavita.yaml
+  - $USERDIR/docker/homelab/active/calibre.yaml
   
-  - $USERDIR/docker/homelab/active/docker-compose.sonarr.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.readarr.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.radarr.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.recommendarr.yaml
+  - $USERDIR/docker/homelab/active/sonarr.yaml
+  - $USERDIR/docker/homelab/active/readarr.yaml
+  - $USERDIR/docker/homelab/active/radarr.yaml
+  - $USERDIR/docker/homelab/active/recommendarr.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.prowlarr.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.it-tools.yaml
-  - $USERDIR/docker/homelab/active/docker-compose.cyberchef.yaml
+  - $USERDIR/docker/homelab/active/prowlarr.yaml
+  - $USERDIR/docker/homelab/active/it-tools.yaml
+  - $USERDIR/docker/homelab/active/cyberchef.yaml
 
-  - $USERDIR/docker/homelab/active/docker-compose.mqtt.yaml
+  - $USERDIR/docker/homelab/active/mqtt.yaml

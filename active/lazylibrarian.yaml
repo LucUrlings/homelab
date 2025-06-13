@@ -1,6 +1,6 @@
 services:
   lazylibrarian:
-    image: lscr.io/linuxserver/lazylibrarian:latest
+    image: lscr.io/linuxserver/lazylibrarian:amd64-d29a4c43-ls159
     container_name: lazylibrarian
     environment:
       - PUID=${PUID}
