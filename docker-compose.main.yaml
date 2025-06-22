@@ -59,7 +59,6 @@ include:
   - $USERDIR/docker/homelab/active/nextcloud.yaml
 
   - $USERDIR/docker/homelab/active/bazarr.yaml
-  - $USERDIR/docker/homelab/active/frigate.yaml
 
 #  - $USERDIR/docker/homelab/active/gekko.yaml
   - $USERDIR/docker/homelab/active/home-assistant.yaml
@@ -94,3 +93,6 @@ include:
   - $USERDIR/docker/homelab/active/cyberchef.yaml
 
   - $USERDIR/docker/homelab/active/mqtt.yaml
+  - $USERDIR/docker/homelab/active/frigate.yaml
+  - $USERDIR/docker/homelab/active/double-take.yaml
+#  - $USERDIR/docker/homelab/active/unifi-redirect.yaml

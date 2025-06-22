@@ -1,5 +1,4 @@
 services:
-  # mqtt5 eclipse-mosquitto
   mqtt5:
     image: eclipse-mosquitto:2.0.21
     container_name: mqtt

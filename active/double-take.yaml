@@ -1,0 +1,19 @@
+services:
+  double-take:
+    container_name: double-take
+    image: skrashevich/double-take:v1.13.11.8
+    restart: unless-stopped
+    volumes:
+      - ${INTERNALDIR}/double-take:/.storage
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.double-take-rtr.entrypoints=websecure"
+      - "traefik.http.routers.double-take-rtr.rule=Host(`dt.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.double-take-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.double-take-rtr.service=double-take-svc"
+      - "traefik.http.services.double-take-svc.loadbalancer.server.port=3000"
