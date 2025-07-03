@@ -1,6 +1,6 @@
 services:
   actual-server:
-    image: docker.io/actualbudget/actual-server:25.7.0
+    image: docker.io/actualbudget/actual-server:25.7.1
     container_name: actual-server
     # environment:
       # Uncomment any of the lines below to set configuration options.
