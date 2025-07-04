@@ -4,7 +4,7 @@ services:
     image: skrashevich/double-take:v1.13.11.8
     restart: unless-stopped
     volumes:
-      - ${INTERNALDIR}/double-take:/.storage
+      - ${DATADIR}/double-take:/.storage
     networks:
       - t3_proxy
     labels:

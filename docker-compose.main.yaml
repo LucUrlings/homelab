@@ -46,6 +46,7 @@ include:
   # These are enabled but wont be turned off with restarts:
   - $USERDIR/docker/homelab/active/gatus.yaml
   - $USERDIR/docker/homelab/active/portainer.yaml
+  - $USERDIR/docker/homelab/active/traefik.yaml
   - $USERDIR/docker/homelab/active/ddclient.yaml
 #  - $USERDIR/docker/homelab/active/adguard.yaml
   - $USERDIR/docker/homelab/active/tailscale.yaml
@@ -65,7 +66,6 @@ include:
   - $USERDIR/docker/homelab/active/actual-server.yaml
   - $USERDIR/docker/homelab/active/timemachine.yaml
   - $USERDIR/docker/homelab/active/tubesync.yaml
-  - $USERDIR/docker/homelab/active/traefik.yaml
   - $USERDIR/docker/homelab/active/socket-proxy.yaml
   - $USERDIR/docker/homelab/active/oauth.yaml
   - $USERDIR/docker/homelab/active/wizarr.yaml
@@ -95,4 +95,4 @@ include:
   - $USERDIR/docker/homelab/active/mqtt.yaml
   - $USERDIR/docker/homelab/active/frigate.yaml
   - $USERDIR/docker/homelab/active/double-take.yaml
-#  - $USERDIR/docker/homelab/active/unifi-redirect.yaml
+  - $USERDIR/docker/homelab/active/compreface-for-double-take.yaml

@@ -1,0 +1,110 @@
+services:
+  compreface-postgres-db:
+    image: exadel/compreface-postgres-db:1.2.0
+    restart: always
+    container_name: "compreface-postgres-db"
+    environment:
+      - POSTGRES_USER=compreface
+      - POSTGRES_PASSWORD=compreface
+      - POSTGRES_DB=compreface
+    volumes:
+      - ${DOCKERDIR}/appdata/compreface/db:/var/lib/postgresql/data
+    networks:
+      - compreface-internal
+
+  compreface-admin:
+    restart: always
+    image: exadel/compreface-admin:1.2.0
+    container_name: "compreface-admin"
+    environment:
+      - POSTGRES_USER=compreface
+      - POSTGRES_PASSWORD=compreface
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres-db:5432/compreface
+      - SPRING_PROFILES_ACTIVE=dev
+      - ENABLE_EMAIL_SERVER=${enable_email_server:-false}
+#      - EMAIL_HOST=${email_host}
+#      - EMAIL_USERNAME=${email_username}
+#      - EMAIL_FROM=${email_from}
+#      - EMAIL_PASSWORD=${email_password}
+      - ADMIN_JAVA_OPTS=${compreface_admin_java_options:--Xmx1g}
+      - MAX_FILE_SIZE=${max_file_size:-5MB}
+      - MAX_REQUEST_SIZE=${max_request_size:-10M}B
+    depends_on:
+      - compreface-postgres-db
+      - compreface-api
+    networks:
+      - compreface-internal
+
+  compreface-api:
+    restart: always
+    image: exadel/compreface-api:1.2.0
+    container_name: "compreface-api"
+    depends_on:
+      - compreface-postgres-db
+    ports:
+      - "8235:8080"
+    environment:
+      - POSTGRES_USER=compreface
+      - POSTGRES_PASSWORD=compreface
+      - POSTGRES_URL=jdbc:postgresql://compreface-postgres-db:5432/compreface
+      - SPRING_PROFILES_ACTIVE=dev
+      - API_JAVA_OPTS=${compreface_api_java_options:--Xmx4g}
+      - SAVE_IMAGES_TO_DB=${save_images_to_db:-true}
+      - MAX_FILE_SIZE=${max_file_size:-5MB}
+      - MAX_REQUEST_SIZE=${max_request_size:-10M}B
+      - CONNECTION_TIMEOUT=${connection_timeout:-10000}
+      - READ_TIMEOUT=${read_timeout:-60000}
+    networks:
+      - compreface-internal
+
+  compreface-fe:
+    restart: always
+    image: exadel/compreface-fe:1.2.0
+    container_name: "compreface-ui"
+    ports:
+      - "8234:80"
+    depends_on:
+      - compreface-api
+      - compreface-admin
+    environment:
+      - CLIENT_MAX_BODY_SIZE=10M
+      - PROXY_READ_TIMEOUT=${read_timeout:-60000}ms
+      - PROXY_CONNECT_TIMEOUT=${connection_timeout:-10000}ms
+    networks:
+      - t3_proxy
+      - compreface-internal
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.compreface-rtr.entrypoints=websecure"
+      - "traefik.http.routers.compreface-rtr.rule=Host(`compreface.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.compreface-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.compreface-rtr.service=compreface-svc"
+      - "traefik.http.services.compreface-svc.loadbalancer.server.port=80"
+
+  compreface-core:
+    restart: always
+    image: exadel/compreface-core:1.2.0-facenet
+    container_name: "compreface-core"
+    environment:
+      - ML_PORT=3000
+      - IMG_LENGTH_LIMIT=${max_detect_size:-640}
+      - UWSGI_PROCESSES=${uwsgi_processes:-2}
+      - UWSGI_THREADS=${uwsgi_threads:-1}
+    healthcheck:
+      test: curl --fail http://localhost:3000/healthcheck || exit 1
+      interval: 10s
+      retries: 0
+      start_period: 0s
+      timeout: 1s
+    networks:
+      - compreface-internal
+
+networks:
+#  t3_proxy:
+#    external: true
+
+  compreface-internal:
+    driver: bridge
