@@ -102,7 +102,7 @@ services:
       - TZ=$TZ
       - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
       - HTPASSWD_FILE=/run/secrets/basic_auth_credentials # HTTP Basic Auth Credentials
-      - DOMAINNAME # Passing the domain name to traefik container to be able to use the variable in rules.
+      - DOMAINNAME=$DOMAINNAME # Passing the domain name to traefik container to be able to use the variable in rules.
     secrets:
       - cf_dns_api_token
       - basic_auth_credentials

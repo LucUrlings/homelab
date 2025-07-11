@@ -1,0 +1,24 @@
+
+services:
+  watchtower:
+    container_name: watchtower
+    image: containrrr/watchtower
+#    profiles:
+#      - all
+#      - core
+    restart: always
+    networks:
+      - t3_proxy
+      - socket_proxy
+    environment:
+      TZ: ${TZ} # defined in .env
+      WATCHTOWER_CLEANUP: "true"
+      WATCHTOWER_INCLUDE_RESTARTING: "true"
+      WATCHTOWER_SCHEDULE: "0 4 * * *" # run daily at 04:00
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --http-api-metrics --http-api-token=1234
+    ports:
+      - 8086:8080
+#    secrets:
+#      - watchtower_api_key

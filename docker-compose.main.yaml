@@ -48,8 +48,8 @@ include:
   - $USERDIR/docker/homelab/active/portainer.yaml
   - $USERDIR/docker/homelab/active/traefik.yaml
   - $USERDIR/docker/homelab/active/ddclient.yaml
-#  - $USERDIR/docker/homelab/active/adguard.yaml
-  - $USERDIR/docker/homelab/active/tailscale.yaml
+  - $USERDIR/docker/homelab/active/adguard.yaml
+#  - $USERDIR/docker/homelab/active/tailscale.yaml
 
   - $USERDIR/docker/homelab/active/anythingllm.yaml
   - $USERDIR/docker/homelab/active/ollama.yaml
@@ -63,15 +63,15 @@ include:
 
 #  - $USERDIR/docker/homelab/active/gekko.yaml
   - $USERDIR/docker/homelab/active/home-assistant.yaml
-  - $USERDIR/docker/homelab/active/actual-server.yaml
+#  - $USERDIR/docker/homelab/active/actual-server.yaml
   - $USERDIR/docker/homelab/active/timemachine.yaml
   - $USERDIR/docker/homelab/active/tubesync.yaml
   - $USERDIR/docker/homelab/active/socket-proxy.yaml
   - $USERDIR/docker/homelab/active/oauth.yaml
   - $USERDIR/docker/homelab/active/wizarr.yaml
 
-  - $USERDIR/docker/homelab/active/gluetun.yaml
-  - $USERDIR/docker/homelab/active/deluge.yaml
+#  - $USERDIR/docker/homelab/active/gluetun.yaml
+#  - $USERDIR/docker/homelab/active/deluge.yaml
   - $USERDIR/docker/homelab/active/flaresolverr.yaml
   
   - $USERDIR/docker/homelab/active/jellyfin.yaml
@@ -84,7 +84,7 @@ include:
   - $USERDIR/docker/homelab/active/calibre.yaml
   
   - $USERDIR/docker/homelab/active/sonarr.yaml
-  - $USERDIR/docker/homelab/active/readarr.yaml
+#  - $USERDIR/docker/homelab/active/readarr.yaml
   - $USERDIR/docker/homelab/active/radarr.yaml
   - $USERDIR/docker/homelab/active/recommendarr.yaml
 
@@ -93,6 +93,4 @@ include:
   - $USERDIR/docker/homelab/active/cyberchef.yaml
 
   - $USERDIR/docker/homelab/active/mqtt.yaml
-  - $USERDIR/docker/homelab/active/frigate.yaml
-  - $USERDIR/docker/homelab/active/double-take.yaml
-  - $USERDIR/docker/homelab/active/compreface-for-double-take.yaml
+  - $USERDIR/docker/homelab/active/watchtower.yaml
