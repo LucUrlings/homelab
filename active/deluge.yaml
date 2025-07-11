@@ -1,6 +1,6 @@
 services:
   deluge:
-    image: lscr.io/linuxserver/deluge:2.2.0
+    image: lscr.io/linuxserver/deluge:latest
     container_name: deluge
     network_mode: service:gluetun
     # network_mode: service:vpn

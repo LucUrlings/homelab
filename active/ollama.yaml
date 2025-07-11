@@ -1,6 +1,6 @@
 services:
   ollama:
-    image: ollama/ollama:0.9.4
+    image: ollama/ollama:latest
     container_name: ollama
     networks:
       - t3_proxy

@@ -1,7 +1,7 @@
 services:
   gatus:
     container_name: gatus
-    image: twinproduction/gatus:v5.19.0
+    image: twinproduction/gatus:latest
     restart: unless-stopped
     networks:
       - t3_proxy

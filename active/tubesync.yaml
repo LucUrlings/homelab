@@ -1,6 +1,6 @@
 services:
   tubesync:
-    image: ghcr.io/meeb/tubesync:v0.15.7
+    image: ghcr.io/meeb/tubesync:latest
     container_name: tubesync
     restart: unless-stopped
     networks:

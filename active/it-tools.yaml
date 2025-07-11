@@ -1,7 +1,7 @@
 services:
   # IT-Tools - Status Page & Monitoring Server
   it-tools:
-    image: corentinth/it-tools:2024.5.13-a0bc346
+    image: corentinth/it-tools:latest
     container_name: it-tools
     security_opt:
       - no-new-privileges:true

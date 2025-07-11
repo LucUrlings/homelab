@@ -3,7 +3,7 @@ services:
   # https://www.smarthomebeginner.com/google-oauth-with-traefik-docker/
   oauth:
     container_name: oauth
-    image: thomseddon/traefik-forward-auth:2.2.0
+    image: thomseddon/traefik-forward-auth:latest
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

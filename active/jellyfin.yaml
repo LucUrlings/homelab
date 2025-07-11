@@ -1,6 +1,6 @@
 services: 
   jellyfin:
-    image: linuxserver/jellyfin:10.10.7
+    image: linuxserver/jellyfin:latest
     container_name: jellyfin
     restart: unless-stopped
     group_add:
