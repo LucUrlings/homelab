@@ -1,0 +1,53 @@
+services:
+  airtrail_db:
+    container_name: airtrail_db
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ${AIRTRAIL_DB_DATABASE_NAME}
+      POSTGRES_USER: ${AIRTRAIL_DB_USERNAME}
+      POSTGRES_PASSWORD: ${AIRTRAIL_DB_PASSWORD}
+      ORIGIN: https://airtrail.lucurlings.nl
+#      DB_URL: ${AIRTRAIL_DB_URL}
+#      DB_PASSWORD: ${AIRTRAIL_DB_PASSWORD}
+#      DB_DATABASE_NAME: ${AIRTRAIL_DB_DATABASE_NAME}
+#      DB_USERNAME: ${AIRTRAIL_DB_USERNAME}
+    volumes:
+      - $DOCKERDIR/appdata/airtrail_db:/var/lib/postgresql/data
+    networks:
+      - airtrail_network
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${AIRTRAIL_DB_USERNAME} -d ${AIRTRAIL_DB_DATABASE_NAME}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  airtrail:
+    container_name: airtrail
+    image: johly/airtrail:latest
+    restart: always
+    environment:
+      ORIGIN: https://airtrail.lucurlings.nl
+      DB_URL: ${AIRTRAIL_DB_URL}
+      DB_PASSWORD: ${AIRTRAIL_DB_PASSWORD}
+      DB_DATABASE_NAME: ${AIRTRAIL_DB_DATABASE_NAME}
+      DB_USERNAME: ${AIRTRAIL_DB_USERNAME}
+    depends_on:
+      airtrail_db:
+        condition: service_healthy
+    networks:
+      - t3_proxy
+      - airtrail_network
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.airtrail.entrypoints=websecure"
+      - "traefik.http.routers.airtrail.rule=Host(`airtrail.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.airtrail.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.airtrail.service=airtrail-svc"
+      - "traefik.http.services.airtrail-svc.loadbalancer.server.port=3000"
+
+networks:
+  airtrail_network:
+    driver: bridge

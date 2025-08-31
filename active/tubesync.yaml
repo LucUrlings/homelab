@@ -1,10 +1,25 @@
 services:
+  tubesync-db:
+    image: postgres:17
+    container_name: tubesync-db
+    restart: unless-stopped
+    networks:
+      - tubesync_network
+    ports:
+      - 5432:5432
+    volumes:
+      - $DOCKERDIR/appdata/tubesync/db:/var/lib/postgresql/data
+    environment:
+      - POSTGRES_DB=tubesync
+      - POSTGRES_USER=tubesync
+      - POSTGRES_PASSWORD=tubesync
   tubesync:
     image: ghcr.io/meeb/tubesync:latest
     container_name: tubesync
     restart: unless-stopped
     networks:
       - t3_proxy
+      - tubesync_network
     volumes:
       - $DOCKERDIR/appdata/tubesync:/config
       - $DATADIR/media/youtube:/downloads
@@ -12,6 +27,9 @@ services:
       TZ: $TZ
       PUID: $PUID
       PGID: $PGID
+      DATABASE_CONNECTION: postgresql://tubesync:tubesync@tubesync-db:5432/tubesync
+    depends_on:
+      - tubesync-db
     labels:
       - "traefik.enable=true"
       # HTTP Routers Auth
@@ -24,3 +42,7 @@ services:
       - "traefik.http.routers.tubesync-rtr.service=tubesync-svc"
       - "traefik.http.routers.tubesync-rtr-bypass.service=tubesync-svc"
       - "traefik.http.services.tubesync-svc.loadbalancer.server.port=4848"
+
+networks:
+  tubesync_network:
+    driver: bridge

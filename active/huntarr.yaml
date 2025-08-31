@@ -1,0 +1,21 @@
+services:
+  huntarr:
+    image: ghcr.io/plexguide/huntarr:latest
+    container_name: huntarr
+    restart: always
+    volumes:
+      - $DOCKERDIR/appdata/huntarr:/config
+    environment:
+      - TZ=$TZ
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.huntarr.entrypoints=websecure"
+      - "traefik.http.routers.huntarr.rule=Host(`huntarr.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.huntarr.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.huntarr.service=huntarr-svc"
+      - "traefik.http.services.huntarr-svc.loadbalancer.server.port=9705"

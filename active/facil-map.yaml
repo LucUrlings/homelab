@@ -1,0 +1,52 @@
+services:
+  facilmap:
+    image: facilmap/facilmap
+    container_name: facilmap
+    links:
+      - facilmap_db
+    depends_on:
+      facilmap_db:
+        condition: service_healthy
+    environment:
+      USER_AGENT: My FacilMap (https://facilmap.lucurlings.nl/, facilmap@example.org)
+      TRUST_PROXY: "true"
+      DB_TYPE: postgres
+      DB_HOST: $FACILMAP_DB_HOST
+      DB_NAME: $FACILMAP_DB_NAME
+      DB_USER: $FACILMAP_DB_USER
+      DB_PASSWORD: $FACILMAP_DB_PASSWORD
+      ORS_TOKEN: $FACILMAP_ORS_TOKEN # Get an API key on https://go.openrouteservice.org/ (needed for routing)
+      MAPBOX_TOKEN: $FACILMAP_MAPBOX_TOKEN # Get an API key on https://www.mapbox.com/signup/ (needed for routing)
+      MAXMIND_USER_ID: $FACILMAP_MAXMIND_USER_ID # Sign up here https://www.maxmind.com/en/geolite2/signup (needed for geoip lookup to show initial map state)
+      MAXMIND_LICENSE_KEY: $FACILMAP_MAXMIND_LICENSE_KEY
+      LIMA_LABS_TOKEN: # Get an API key on https://maps.lima-labs.com/ (optional, needed for double-resolution tiles)
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+      - facilmap_network
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.facilmap.entrypoints=websecure"
+      - "traefik.http.routers.facilmap.rule=Host(`facilmap.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.facilmap.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.facilmap.service=facilmap-svc"
+      - "traefik.http.services.facilmap-svc.loadbalancer.server.port=8080"
+  facilmap_db:
+    image: postgis/postgis
+    container_name: facilmap_db
+    environment:
+      POSTGRES_USER: $FACILMAP_DB_USER
+      POSTGRES_PASSWORD: $FACILMAP_DB_PASSWORD
+      POSTGRES_DB: $FACILMAP_DB_NAME
+    healthcheck:
+      test: pg_isready -d $$POSTGRES_DB
+    restart: unless-stopped
+    networks:
+      - facilmap_network
+
+networks:
+  facilmap_network:
+    driver: bridge

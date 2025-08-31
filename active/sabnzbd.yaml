@@ -15,7 +15,8 @@ services:
       - "8084:8080"
     volumes:
       - $DOCKERDIR/appdata/sabnzbd:/config
-      - $DATADIR/usenet:/data/usenet:rw
+      - $INTERNALDIR/usenet/incomplete:/data/usenet/incomplete:rw
+      - $DATADIR/usenet/complete:/data/usenet/complete:rw
     environment:
       PUID: $PUID
       PGID: $PGID

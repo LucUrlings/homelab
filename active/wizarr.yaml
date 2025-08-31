@@ -7,6 +7,8 @@ services:
       - $DOCKERDIR/appdata/wizarr:/data/database
     networks:
       - t3_proxy
+    environment:
+      - TZ=$TZ
     labels:
       - "traefik.enable=true"
       # HTTP Routers Auth

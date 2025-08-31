@@ -16,7 +16,6 @@ services:
     volumes:
       - $DOCKERDIR/appdata/radarr:/config
       - $DATADIR:/data
-      # - $DATADIR/usenet/downloads:/data/downloads
       - "/etc/localtime:/etc/localtime:ro"
     environment:
       TZ: $TZ

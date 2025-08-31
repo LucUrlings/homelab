@@ -1,0 +1,21 @@
+services:
+  suggestarr:
+    image: ciuse99/suggestarr:latest
+    container_name: SuggestArr
+    restart: always
+    volumes:
+      - ./config_files:/app/config/config_files
+      - $DOCKERDIR/appdata/suggestarr:/app/config/config_files
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.suggestarr-rtr.entrypoints=websecure"
+      - "traefik.http.routers.suggestarr-rtr.rule=Host(`suggestarr.$DOMAINNAME`)"
+      - "traefik.http.routers.suggestarr-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.suggestarr-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.suggestarr-rtr.service=suggestarr-svc"
+      - "traefik.http.services.suggestarr-svc.loadbalancer.server.port=5000"

@@ -17,6 +17,7 @@ services:
       - /dev/dri:/dev/dri
     volumes:
       - $DOCKERDIR/appdata/jellyfin:/config
+      - $INTERNALDIR/jellyfin/transcodes:/cache/transcodes
       - $DATADIR/media:/data/media
 #      - /dev/shm:/data/transcode # Offload transcoding to RAM if you have enough RAM
     labels:

@@ -11,6 +11,8 @@ services:
         volumes:
             - $DATADIR/anythingllm:/app/server/storage
             - $DOCKERDIR/appdata/anythingllm/.env:/app/server/.env
+        environment:
+            - STORAGE_DIR=/app/server/storage
         labels:
           - "traefik.enable=true"
           # HTTP Routers
