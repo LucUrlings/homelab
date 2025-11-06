@@ -15,7 +15,7 @@ services:
       - "traefik.http.routers.huntarr.entrypoints=websecure"
       - "traefik.http.routers.huntarr.rule=Host(`huntarr.$DOMAINNAME`)"
       # Middlewares
-      # - "traefik.http.routers.huntarr.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      - "traefik.http.routers.huntarr.middlewares=chain-oauth@file"
       # Http Services
       - "traefik.http.routers.huntarr.service=huntarr-svc"
       - "traefik.http.services.huntarr-svc.loadbalancer.server.port=9705"

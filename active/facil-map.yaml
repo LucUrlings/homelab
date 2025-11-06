@@ -30,7 +30,7 @@ services:
       - "traefik.http.routers.facilmap.entrypoints=websecure"
       - "traefik.http.routers.facilmap.rule=Host(`facilmap.$DOMAINNAME`)"
       # Middlewares
-      # - "traefik.http.routers.facilmap.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      - "traefik.http.routers.facilmap.middlewares=chain-oauth@file"
       # Http Services
       - "traefik.http.routers.facilmap.service=facilmap-svc"
       - "traefik.http.services.facilmap-svc.loadbalancer.server.port=8080"

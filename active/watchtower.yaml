@@ -14,7 +14,10 @@ services:
       TZ: ${TZ} # defined in .env
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_INCLUDE_RESTARTING: "true"
+      WATCHTOWER_INCLUDE_STOPPED: "true"
+      WATCHTOWER_REVIVE_STOPPED: "true"
       WATCHTOWER_SCHEDULE: "0 4 * * *" # run daily at 04:00
+      WATCHTOWER_NOTIFICATION_URL: WATCHTOWER_NOTIFICATION_URL_TELEGRAM
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --http-api-metrics --http-api-token=1234

@@ -16,7 +16,7 @@ services:
       - "traefik.http.routers.kitchenowl-rtr.rule=Host(`kitchenowl.$DOMAINNAME`)"
       - "traefik.http.routers.kitchenowl-rtr.priority=99"
       # Middlewares
-      - "traefik.http.routers.kitchenowl-rtr.middlewares=chain-oauth@file"
+#      - "traefik.http.routers.kitchenowl-rtr.middlewares=chain-oauth@file"
       # HTTP Services
       - "traefik.http.routers.kitchenowl-rtr.service=kitchenowl-svc"
       - "traefik.http.routers.kitchenowl-rtr-bypass.service=kitchenowl-svc"

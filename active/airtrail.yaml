@@ -43,7 +43,7 @@ services:
       - "traefik.http.routers.airtrail.entrypoints=websecure"
       - "traefik.http.routers.airtrail.rule=Host(`airtrail.$DOMAINNAME`)"
       # Middlewares
-      # - "traefik.http.routers.airtrail.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      - "traefik.http.routers.airtrail.middlewares=chain-oauth@file"
       # Http Services
       - "traefik.http.routers.airtrail.service=airtrail-svc"
       - "traefik.http.services.airtrail-svc.loadbalancer.server.port=3000"

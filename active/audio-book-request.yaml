@@ -1,0 +1,18 @@
+services:
+  audiobookrequest:
+    container_name: audiobookrequest
+    image: markbeep/audiobookrequest:1
+    volumes:
+      - $DOCKERDIR/appdata/audiobookrequest:/config
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.audiobookrequest.entrypoints=websecure"
+      - "traefik.http.routers.audiobookrequest.rule=Host(`audiobookrequest.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.audiobookrequest.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.audiobookrequest.service=audiobookrequest-svc"
+      - "traefik.http.services.audiobookrequest-svc.loadbalancer.server.port=8000"

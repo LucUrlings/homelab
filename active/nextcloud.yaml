@@ -6,6 +6,7 @@ services:
     networks:
       - t3_proxy
       - nextcloud_internal
+    restart: always
     labels:
       - "traefik.enable=true"
       # HTTP Routers
@@ -29,6 +30,7 @@ services:
     env_file: ${DOCKERDIR}/appdata/nextcloud/nextcloud.env
     networks:
       - nextcloud_internal
+    restart: always
     volumes:
       - ${INTERNALDIR}/nextcloud/db:/var/lib/mysql
 
@@ -39,6 +41,7 @@ services:
     volumes:
       - ${INTERNALDIR}/nextcloud/database-dump:/dump
       - /etc/localtime:/etc/localtime:ro
+    restart: always
     entrypoint: |
       bash -c 'bash -s <<EOF
       trap "break;exit" SIGHUP SIGINT SIGTERM
@@ -57,6 +60,7 @@ services:
     image: redis:alpine
     networks:
       - nextcloud_internal
+    restart: always
     volumes:
       - ${INTERNALDIR}/nextcloud/redis:/data
 
@@ -71,6 +75,7 @@ services:
     user: www-data
     networks:
       - nextcloud_internal
+    restart: always
     entrypoint: |
       bash -c 'bash -s <<EOF
         trap "break;exit" SIGHUP SIGINT SIGTERM

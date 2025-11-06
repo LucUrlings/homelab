@@ -63,7 +63,7 @@ include:
 
 #  - $USERDIR/docker/homelab/active/gekko.yaml
   - $USERDIR/docker/homelab/active/home-assistant.yaml
-#  - $USERDIR/docker/homelab/active/actual-server.yaml
+  - $USERDIR/docker/homelab/active/actual-server.yaml
   - $USERDIR/docker/homelab/active/timemachine.yaml
   - $USERDIR/docker/homelab/active/tubesync.yaml
   - $USERDIR/docker/homelab/active/socket-proxy.yaml
@@ -73,7 +73,10 @@ include:
 #  - $USERDIR/docker/homelab/active/gluetun.yaml
 #  - $USERDIR/docker/homelab/active/deluge.yaml
   - $USERDIR/docker/homelab/active/flaresolverr.yaml
+
+  - $USERDIR/docker/homelab/active/dawarich.yaml
   
+  - $USERDIR/docker/homelab/active/huntarr.yaml
   - $USERDIR/docker/homelab/active/jellyfin.yaml
   - $USERDIR/docker/homelab/active/jellyseerr.yaml
   - $USERDIR/docker/homelab/active/whoami.yaml
@@ -86,9 +89,7 @@ include:
   - $USERDIR/docker/homelab/active/sonarr.yaml
 #  - $USERDIR/docker/homelab/active/readarr.yaml
   - $USERDIR/docker/homelab/active/radarr.yaml
-  - $USERDIR/docker/homelab/active/recommendarr.yaml
-  - $USERDIR/docker/homelab/active/suggestarr.yaml
-  - $USERDIR/docker/homelab/active/huntarr.yaml
+  - $USERDIR/docker/homelab/active/discovarr.yaml
 
   - $USERDIR/docker/homelab/active/prowlarr.yaml
   - $USERDIR/docker/homelab/active/it-tools.yaml
@@ -96,7 +97,11 @@ include:
 
   - $USERDIR/docker/homelab/active/airtrail.yaml
   - $USERDIR/docker/homelab/active/facil-map.yaml
+  - $USERDIR/docker/homelab/active/audio-book-request.yaml
+  - $USERDIR/docker/homelab/active/immich.yaml
 
   - $USERDIR/docker/homelab/active/mqtt.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
   - $USERDIR/docker/homelab/active/kitchen-owl.yaml
+
+  - $USERDIR/docker/homelab/active/n8n.yaml

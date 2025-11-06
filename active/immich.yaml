@@ -1,0 +1,116 @@
+#
+# WARNING: To install Immich, follow our guide: https://immich.app/docs/install/docker-compose
+#
+# Make sure to use the docker-compose.yml of the current release:
+#
+# https://github.com/immich-app/immich/releases/latest/download/docker-compose.yml
+#
+# The compose file on main may not be compatible with the latest release.
+
+services:
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    # extends:
+    #   file: hwaccel.transcoding.yml
+    #   service: cpu # set to one of [nvenc, quicksync, rkmpp, vaapi, vaapi-wsl] for accelerated transcoding
+    volumes:
+      # Do not edit the next line. If you want to change the media storage location on your system, edit the value of UPLOAD_LOCATION in the .env file
+      - ${IMMICH_UPLOAD_LOCATION}:/data
+      - /etc/localtime:/etc/localtime:ro
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - '993' # render group id. get this by 'getent group render'
+#    env_file:
+#      - ${DOCKERDIR}/app-specific-env-vars/immich.env
+#    ports:
+#      - '2283:2283'
+    environment:
+      UPLOAD_LOCATION:
+      DB_DATA_LOCATION: $IMMICH_DB_DATA_LOCATION
+      IMMICH_VERSION: $IMMICH_VERSION
+      DB_PASSWORD: $IMMICH_DB_PASSWORD
+      DB_USERNAME: $IMMICH_DB_USERNAME
+      DB_DATABASE_NAME: $IMMICH_DB_DATABASE_NAME
+    depends_on:
+      - redis
+      - database
+    restart: always
+    healthcheck:
+      disable: false
+    networks:
+      - immich_network
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.immich.entrypoints=websecure"
+      - "traefik.http.routers.immich.rule=Host(`immich.$DOMAINNAME`)"
+      # Middlewares
+#      - "traefik.http.routers.immich.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.immich.service=immich-svc"
+      - "traefik.http.services.immich-svc.loadbalancer.server.port=2283"
+
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    # For hardware acceleration, add one of -[armnn, cuda, rocm, openvino, rknn] to the image tag.
+    # Example tag: ${IMMICH_VERSION:-release}-cuda
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}-openvino
+    # extends: # uncomment this section for hardware acceleration - see https://immich.app/docs/features/ml-hardware-acceleration
+    #   file: hwaccel.ml.yml
+    #   service: cpu # set to one of [armnn, cuda, rocm, openvino, openvino-wsl, rknn] for accelerated inference - use the `-wsl` version for WSL2 where applicable
+    volumes:
+      - ${INTERNALDIR}/immich/model-cache:/cache
+    devices:
+      - /dev/dri:/dev/dri
+    group_add:
+      - '993' # render group id. get this by 'getent group render'
+    environment:
+      UPLOAD_LOCATION:
+      DB_DATA_LOCATION: $IMMICH_DB_DATA_LOCATION
+      IMMICH_VERSION: $IMMICH_VERSION
+      DB_PASSWORD: $IMMICH_DB_PASSWORD
+      DB_USERNAME: $IMMICH_DB_USERNAME
+      DB_DATABASE_NAME: $IMMICH_DB_DATABASE_NAME
+#    env_file:
+#      - ${DOCKERDIR}/app-specific-env-vars/immich.env
+    restart: always
+    healthcheck:
+      disable: false
+    networks:
+      - immich_network
+
+  redis:
+    container_name: immich-redis
+    image: docker.io/valkey/valkey:8-bookworm@sha256:a137a2b60aca1a75130022d6bb96af423fefae4eb55faf395732db3544803280
+    healthcheck:
+      test: redis-cli ping || exit 1
+    restart: always
+    networks:
+      - immich_network
+
+  database:
+    container_name: immich-postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0@sha256:32324a2f41df5de9efe1af166b7008c3f55646f8d0e00d9550c16c9822366b4a
+    environment:
+      POSTGRES_PASSWORD: $IMMICH_DB_PASSWORD
+      POSTGRES_USER: $IMMICH_DB_USERNAME
+      POSTGRES_DB: $IMMICH_DB_DATABASE_NAME
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+      # Uncomment the DB_STORAGE_TYPE: 'HDD' var if your database isn't stored on SSDs
+      # DB_STORAGE_TYPE: 'HDD'
+    volumes:
+      # Do not edit the next line. If you want to change the database storage location on your system, edit the value of DB_DATA_LOCATION in the .env file
+      - ${INTERNALDIR}/immich/database:/var/lib/postgresql/data
+    shm_size: 128mb
+#    env_file:
+#      - ${DOCKERDIR}/app-specific-env-vars/immich.env
+    restart: always
+    networks:
+      - immich_network
+
+networks:
+  immich_network:
+    driver: bridge

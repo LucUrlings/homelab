@@ -1,0 +1,49 @@
+services:
+  discovarr:
+    image: ghcr.io/sqrlmstr5000/discovarr:latest
+    container_name: discovarr
+    restart: unless-stopped
+    environment:
+      # Client needs to know where the API is. This will be your host machine IP or hostname since the client is connecting from your browser
+      - VITE_DISCOVARR_URL=https://discovarr.$DOMAINNAME/api
+      - PUID=$PUID
+      - PGID=$PGID
+      - LOGLEVEL=INFO # DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+      # --- Jellyfin Settings ---
+      - JELLYFIN_ENABLED=True # Set to True if using Jellyfin
+      - JELLYFIN_URL=http://jellyfin:8096
+#      - JELLYFIN_API_KEY=1f7806469126478fbf0b7910b3f27693
+
+      # --- Radarr Settings ---
+      - RADARR_URL=http://radarr:7878
+#      - RADARR_API_KEY=2bb84b6a53bd4474ac7de39979ccce1e
+#      - RADARR_DEFAULT_QUALITY_PROFILE_ID=1 # Example ID
+      - RADARR_ROOT_DIR_PATH=/data/media/movies
+
+      # --- Sonarr Settings ---
+      - SONARR_URL=http://sonarr:8989
+#      - SONARR_API_KEY=fe6e3718349a42c99cd25773ef979bef
+#      - SONARR_DEFAULT_QUALITY_PROFILE_ID=1 # Example ID
+      - SONARR_ROOT_DIR_PATH=/data/media/tv
+
+#      # --- Gemini AI Settings ---
+#      - GEMINI_API_KEY=AIzaSyCwZMTUKKLyXk3Ni1i8rdUXMJ-e1KRRg-c
+##      - GEMINI_MODEL=gemini-pro # Or your preferred Gemini model
+#      - GEMINI_THINKING_BUDGET=1024
+#      - GEMINI_TEMPERATURE=0.7
+    volumes:
+      - $DOCKERDIR/appdata/discovarr/config:/config
+      - $DOCKERDIR/appdata/discovarr/cache:/cache
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.discovarr.entrypoints=websecure"
+      - "traefik.http.routers.discovarr.rule=Host(`discovarr.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.discovarr.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.discovarr.service=discovarr-svc"
+      - "traefik.http.services.discovarr-svc.loadbalancer.server.port=8000"
