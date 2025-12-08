@@ -27,6 +27,8 @@ secrets:
     file: $SECRETSDIR/authelia_jwt_secret
   authelia_session_secret:
     file: $SECRETSDIR/authelia_session_secret
+  shoutrrr_telegram_secret:
+    file: $SECRETSDIR/shoutrrr_telegram_secret
   # authelia_storage_mysql_password:
   #   file: $SECRETSDIR/secrets/authelia_storage_mysql_password
   # authelia_notifier_smtp_password:
