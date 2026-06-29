@@ -1,0 +1,20 @@
+services:
+  withoutbg:
+    image: withoutbg/app:latest
+    container_name: withoutbg
+    ports:
+      - 8754:80
+    networks:
+      - t3_proxy
+    restart: unless-stopped
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers Auth
+      - "traefik.http.routers.withoutbg-rtr.entrypoints=websecure"
+      - "traefik.http.routers.withoutbg-rtr.rule=Host(`withoutbg.$DOMAINNAME`) || Host(`wbg.$DOMAINNAME`)"
+      - "traefik.http.routers.withoutbg-rtr.priority=99"
+      # Middlewares
+      - "traefik.http.routers.withoutbg-rtr.middlewares=chain-oauth@file"
+      # HTTP Services
+      - "traefik.http.routers.withoutbg-rtr.service=withoutbg-svc"
+      - "traefik.http.services.withoutbg-svc.loadbalancer.server.port=8754"

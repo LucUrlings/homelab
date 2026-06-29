@@ -80,7 +80,7 @@ include:
   
   - $USERDIR/docker/homelab/active/huntarr.yaml
   - $USERDIR/docker/homelab/active/jellyfin.yaml
-  - $USERDIR/docker/homelab/active/jellyseerr.yaml
+  - $USERDIR/docker/homelab/active/seerr.yaml
   - $USERDIR/docker/homelab/active/whoami.yaml
   - $USERDIR/docker/homelab/active/sabnzbd.yaml
 
@@ -107,3 +107,7 @@ include:
   - $USERDIR/docker/homelab/active/kitchen-owl.yaml
 
   - $USERDIR/docker/homelab/active/n8n.yaml
+
+  - $USERDIR/docker/homelab/active/aveon.yaml
+  - $USERDIR/docker/homelab/active/ruview.yaml
+  - $USERDIR/docker/homelab/active/lucurlings.nl.yaml

@@ -1,0 +1,17 @@
+services:
+  lucurlings-website:
+    image: ghcr.io/lucurlings/lucurlings.nl:latest
+    container_name: lucurlings.nl
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.lucurlings.entrypoints=websecure"
+      - "traefik.http.routers.lucurlings.rule=Host(`$DOMAINNAME`)"
+      # Middlewares
+#      - "traefik.http.routers.lucurlings.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.lucurlings.service=lucurlings-svc"
+      - "traefik.http.services.lucurlings-svc.loadbalancer.server.port=80"

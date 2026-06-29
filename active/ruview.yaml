@@ -1,0 +1,18 @@
+services:
+  ruvnet:
+    image: ruvnet/wifi-densepose:latest
+    container_name: ruvnet
+    networks:
+      - t3_proxy
+    environment:
+      SENSING_ALLOWED_HOSTS: ruvnet.$DOMAINNAME
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.ruvnet.entrypoints=websecure"
+      - "traefik.http.routers.ruvnet.rule=Host(`ruvnet.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.airtrail.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.ruvnet.service=ruvnet-svc"
+      - "traefik.http.services.ruvnet-svc.loadbalancer.server.port=3000"

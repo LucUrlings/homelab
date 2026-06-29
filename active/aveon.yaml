@@ -1,0 +1,76 @@
+services:
+  aveon:
+    image: ghcr.io/lucurlings/aveon:latest
+    container_name: aveon
+    restart: unless-stopped
+    depends_on:
+      aveon-redis:
+        condition: service_healthy
+      aveon-postgres:
+        condition: service_healthy
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      FlightApi__ApiKey: ${AVEON_FLIGHTAPI_API_KEY}
+      Redis__ConnectionString: aveon-redis:6379
+      Redis__FlightApiOneWayTtlMinutes: ${AVEON_REDIS_FLIGHT_API_ONE_WAY_TTL_MINUTES:-30}
+      Redis__AirportDataTtlMinutes: ${AVEON_REDIS_AIRPORT_DATA_TTL_MINUTES:-10080}
+      Redis__SearchSessionTtlMinutes: ${AVEON_REDIS_SEARCH_SESSION_TTL_MINUTES:-30}
+      Search__MaxSearchCombinations: ${AVEON_SEARCH_MAX_SEARCH_COMBINATIONS:-100}
+      Search__AnonymousMaxSearchCombinations: ${AVEON_SEARCH_ANONYMOUS_MAX_SEARCH_COMBINATIONS:-15}
+      Search__UserMaxSearchCombinations: ${AVEON_SEARCH_USER_MAX_SEARCH_COMBINATIONS:-100}
+      ConnectionStrings__Default: Host=aveon-postgres;Port=5432;Database=${AVEON_POSTGRES_DB:-aveon};Username=${AVEON_POSTGRES_USER:-aveon};Password=${AVEON_POSTGRES_PASSWORD:-aveon_dev_password}
+    networks:
+      - aveon-network
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.aveon.entrypoints=websecure"
+      - "traefik.http.routers.aveon.rule=Host(`aveon.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.aveon.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.aveon.service=aveon-svc"
+      - "traefik.http.services.aveon-svc.loadbalancer.server.port=8080"
+
+  aveon-postgres:
+    image: postgres:18-alpine
+    container_name: aveon-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${AVEON_POSTGRES_DB:-aveon}
+      POSTGRES_USER: ${AVEON_POSTGRES_USER:-aveon}
+      POSTGRES_PASSWORD: ${AVEON_POSTGRES_PASSWORD:-aveon_dev_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${AVEON_POSTGRES_USER:-aveon} -d $${AVEON_POSTGRES_DB:-aveon}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    volumes:
+      - aveon-postgres-data:/var/lib/postgresql
+    networks:
+      - aveon-network
+
+  aveon-redis:
+    image: redis:7-alpine
+    container_name: aveon-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    volumes:
+      - aveon-redis-data:/data
+    networks:
+      - aveon-network
+
+volumes:
+  aveon-redis-data:
+  aveon-postgres-data:
+
+networks:
+  aveon-network:
