@@ -115,3 +115,4 @@ include:
   - $USERDIR/docker/homelab/active/umami.yaml
   - $USERDIR/docker/homelab/active/lucurlings.nl.yaml
   - $USERDIR/docker/homelab/active/atlas.yaml
+  - $USERDIR/docker/homelab/active/watch-watchtower.yaml

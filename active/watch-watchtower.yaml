@@ -1,0 +1,231 @@
+name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}
+
+x-database-environment: &database-environment
+  ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${WATCHTOWER_POSTGRES_DB:-watchtower};Username=${WATCHTOWER_POSTGRES_USER:-watchtower};Password=${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD}
+
+x-rabbitmq-environment: &rabbitmq-environment
+  RabbitMq__Host: rabbitmq
+  RabbitMq__Port: "5672"
+  RabbitMq__UserName: ${WATCHTOWER_RABBITMQ_USER:-watchtower}
+  RabbitMq__Password: ${WATCHTOWER_RABBITMQ_PASSWORD:?Set WATCHTOWER_RABBITMQ_PASSWORD}
+
+x-object-storage-environment: &object-storage-environment
+  ObjectStorage__Endpoint: minio:9000
+  ObjectStorage__AccessKey: ${WATCHTOWER_MINIO_ROOT_USER:-watchtower}
+  ObjectStorage__SecretKey: ${WATCHTOWER_MINIO_ROOT_PASSWORD:?Set WATCHTOWER_MINIO_ROOT_PASSWORD}
+  ObjectStorage__Bucket: ${WATCHTOWER_MINIO_MEDIA_BUCKET:-watchtower-media}
+  ObjectStorage__UseSsl: "false"
+
+x-backend-service: &backend-service
+  image: ${WATCHTOWER_BACKEND_IMAGE:-ghcr.io/lucurlings/watchtower-backend}:${WATCHTOWER_IMAGE_TAG:-latest}
+  pull_policy: always
+  restart: unless-stopped
+  networks:
+    - infrastructure
+
+services:
+  postgres:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres
+    image: ${WATCHTOWER_POSTGRES_IMAGE:-postgres:18.4-bookworm}
+    environment:
+      POSTGRES_DB: ${WATCHTOWER_POSTGRES_DB:-watchtower}
+      POSTGRES_USER: ${WATCHTOWER_POSTGRES_USER:-watchtower}
+      POSTGRES_PASSWORD: ${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD}
+    volumes:
+      - postgres18_data:/var/lib/postgresql
+    restart: unless-stopped
+    networks:
+      - infrastructure
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "pg_isready -U ${WATCHTOWER_POSTGRES_USER:-watchtower} -d ${WATCHTOWER_POSTGRES_DB:-watchtower}",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+  rabbitmq:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-rabbitmq
+    image: ${WATCHTOWER_RABBITMQ_IMAGE:-rabbitmq:4.2.9-management-alpine}
+    environment:
+      RABBITMQ_DEFAULT_USER: ${WATCHTOWER_RABBITMQ_USER:-watchtower}
+      RABBITMQ_DEFAULT_PASS: ${WATCHTOWER_RABBITMQ_PASSWORD:?Set WATCHTOWER_RABBITMQ_PASSWORD}
+    ports:
+      - "${WATCHTOWER_MANAGEMENT_BIND_ADDRESS:-127.0.0.1}:${WATCHTOWER_RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+    networks:
+      - infrastructure
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "rabbitmq-diagnostics -q check_running && rabbitmq-diagnostics -q check_port_connectivity && rabbitmq-diagnostics -q check_local_alarms",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  flaresolverr:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-flaresolverr
+    image: ${WATCHTOWER_FLARESOLVERR_IMAGE:-ghcr.io/flaresolverr/flaresolverr:v3.5.0}
+    environment:
+      LOG_LEVEL: info
+      LOG_HTML: "false"
+      TZ: ${WATCHTOWER_TZ:-Europe/Dublin}
+    restart: unless-stopped
+    networks:
+      - infrastructure
+
+  minio:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-minio
+    image: ${WATCHTOWER_MINIO_IMAGE:-quay.io/minio/aistor/minio:RELEASE.2026-07-24T16-43-31Z}
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${WATCHTOWER_MINIO_ROOT_USER:-watchtower}
+      MINIO_ROOT_PASSWORD: ${WATCHTOWER_MINIO_ROOT_PASSWORD:?Set WATCHTOWER_MINIO_ROOT_PASSWORD}
+      MINIO_LICENSE: /minio.license
+    ports:
+      - "${WATCHTOWER_MANAGEMENT_BIND_ADDRESS:-127.0.0.1}:${WATCHTOWER_MINIO_CONSOLE_PORT:-9001}:9001"
+    volumes:
+      - minio_data:/data
+      - ${WATCHTOWER_MINIO_LICENSE_PATH:-../MINIO_LICENSE}:/minio.license:ro
+    restart: unless-stopped
+    networks:
+      - infrastructure
+    healthcheck:
+      test: ["CMD-SHELL", "curl --fail http://127.0.0.1:9000/minio/health/live"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+
+  migrator:
+    <<: *backend-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-migrator
+    working_dir: /app/migrator
+    entrypoint: ["dotnet", "/app/migrator/Watchtower.Migrator.dll"]
+    environment:
+      ConnectionStrings__Postgres: Host=postgres;Port=5432;Database=${WATCHTOWER_POSTGRES_DB:-watchtower};Username=${WATCHTOWER_POSTGRES_USER:-watchtower};Password=${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD}
+      DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
+    healthcheck:
+      disable: true
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  backend:
+    <<: *backend-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-backend
+    environment:
+      <<: [*database-environment, *object-storage-environment]
+      ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      HEALTHCHECK_URL: http://127.0.0.1:8080/health
+      Infrastructure__Enabled: "true"
+      ManagementLinks__RabbitMq: ${WATCHTOWER_RABBITMQ_MANAGEMENT_URL:-}
+      ManagementLinks__Minio: ${WATCHTOWER_MINIO_CONSOLE_URL:-}
+    expose:
+      - "8080"
+    networks:
+      - application
+      - infrastructure
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "Watchtower.Api.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  worker:
+    <<: *backend-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-worker
+    working_dir: /app/worker
+    entrypoint: ["dotnet", "/app/worker/Watchtower.Worker.dll"]
+    environment:
+      <<:
+        [
+          *database-environment,
+          *rabbitmq-environment,
+          *object-storage-environment,
+        ]
+      Chrono24__FlareSolverrEndpoint: http://flaresolverr:8191/v1
+      DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+      rabbitmq:
+        condition: service_healthy
+      flaresolverr:
+        condition: service_started
+      minio:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "dotnet", "Watchtower.Worker.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  scheduler:
+    <<: *backend-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-scheduler
+    working_dir: /app/scheduler
+    entrypoint: ["dotnet", "/app/scheduler/Watchtower.Scheduler.dll"]
+    environment:
+      <<: *database-environment
+      DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "dotnet", "Watchtower.Scheduler.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  frontend:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-frontend
+    image: ${WATCHTOWER_FRONTEND_IMAGE:-ghcr.io/lucurlings/watchtower-frontend}:${WATCHTOWER_IMAGE_TAG:-latest}
+    pull_policy: always
+    ports:
+      - "${WATCHTOWER_FRONTEND_BIND_ADDRESS:-127.0.0.1}:${WATCHTOWER_FRONTEND_PORT:-8080}:80"
+    restart: unless-stopped
+    networks:
+      - application
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --spider
+        - http://127.0.0.1/healthz
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+
+volumes:
+  postgres18_data:
+  rabbitmq_data:
+  minio_data:
+
+networks:
+  application:
+    driver: bridge
+  infrastructure:
+    driver: bridge
+    internal: true
