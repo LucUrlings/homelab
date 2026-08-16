@@ -35,6 +35,14 @@ jobs:
           git fetch --prune origin main
           git merge --ff-only origin/main
 
+      - name: Pull latest images
+        working-directory: /home/luc/docker/homelab
+        run: >-
+          docker compose
+          --env-file homelab-configs/.env
+          -f docker-compose.main.yaml
+          pull
+
       - name: Validate Compose configuration
         working-directory: /home/luc/docker/homelab
         run: >-
