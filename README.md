@@ -101,6 +101,15 @@ View logs for one service:
 docker compose -f docker-compose.main.yaml logs -f traefik
 ```
 
+
+## Automatic Deployment
+
+`.github/workflows/deploy.yml` deploys pushes to `main` through a GitHub Actions self-hosted runner installed on this machine. The runner must use the `homelab` label, run as a user that can read this checkout and access Docker, and be installed as a service so it starts after reboot.
+
+Set it up from the GitHub repository page under **Settings → Actions → Runners → New self-hosted runner**. Follow GitHub's generated Linux installation commands, add the `homelab` label when registering the runner, and keep the registration token out of the repository. The runner service user must be able to use the existing SSH key for `origin` and must be in the Docker group.
+
+On every push to `main`, the workflow fast-forwards `/home/luc/docker/homelab`, validates the complete Compose configuration with `homelab-configs/.env`, and runs the normal `up -d` command. It refuses to deploy if the checkout has local changes. Because a self-hosted runner can execute shell commands on this server, protect the `main` branch and only allow trusted changes to merge.
+
 ## Currently Included Stacks
 
 These files are included by `docker-compose.main.yaml` as of this README update:
