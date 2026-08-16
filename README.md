@@ -44,6 +44,7 @@ Important variables include:
 - `CLOUDFLARE_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONEID`, `CLOUDFLARE_IPS`
 - `LOCAL_IPS`, `SERVER_IP`
 - `TRAEFIK_AUTH_BYPASS_KEY`
+- `RCLONE_REMOTE_NAME`, `RCLONE_REMOTE_PATH`, `RCLONE_SYNC_INTERVAL_SECONDS`
 - App-specific variables for Immich, AirTrail, Aveon, Time Machine, and other stacks that reference `${...}` values.
 
 Secrets are read from `$SECRETSDIR` by `docker-compose.main.yaml`, including:
@@ -53,6 +54,20 @@ Secrets are read from `$SECRETSDIR` by `docker-compose.main.yaml`, including:
 - `traefik_forward_auth`
 - `shoutrrr_telegram_secret`
 - Authelia and Guacamole secrets retained for inactive or optional stacks
+
+## Rclone Google Drive Sync
+
+The included `rclone` service mirrors `$DOCKERDIR` to a Google Drive remote. It runs `rclone sync` once at startup and then every `RCLONE_SYNC_INTERVAL_SECONDS` seconds. Files removed locally are removed from the destination as well; the local source is mounted read-only. The rclone OAuth configuration lives under `$DOCKERDIR/appdata/rclone` and is included in the sync.
+
+Before starting the stack, create the Google Drive remote interactively. Use the same env-file as the normal stack command:
+
+```bash
+docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone config
+docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone lsd google-drive:
+docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml up -d
+```
+
+Use the `google-drive` remote name unless `RCLONE_REMOTE_NAME` is changed in `.env`. The default destination folder is `homelab-configs`.
 
 ## Common Commands
 
@@ -126,6 +141,7 @@ These files are included by `docker-compose.main.yaml` as of this README update:
 | `portainer.yaml` | Portainer EE | Docker management UI | `portainer.$DOMAINNAME`, direct port `9443` |
 | `prowlarr.yaml` | Prowlarr | Indexer management | `prowlarr.$DOMAINNAME` |
 | `radarr.yaml` | Radarr | Movie automation | `radarr.$DOMAINNAME` |
+| `rclone.yaml` | rclone | One-way homelab configuration sync to Google Drive | None |
 | `ruview.yaml` | Ruvnet WiFi DensePose | WiFi sensing experiment | `ruvnet.$DOMAINNAME` |
 | `sabnzbd.yaml` | SABnzbd | Usenet downloader | `sabnzbd.$DOMAINNAME`, direct port `8084` |
 | `seerr.yaml` | Seerr/Jellyseerr | Media requests | `jellyseerr.$DOMAINNAME`, `seerr.$DOMAINNAME` |

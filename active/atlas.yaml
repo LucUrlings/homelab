@@ -1,0 +1,58 @@
+name: ${COMPOSE_PROJECT_NAME:-atlas}
+
+services:
+  atlas-backend:
+    image: ${BACKEND_IMAGE:-ghcr.io/lucurlings/atlas-expeditions-through-time-backend}:${IMAGE_TAG:-latest}
+    container_name: atlas-backend
+    pull_policy: always
+    environment:
+      ASPNETCORE_ENVIRONMENT: ${ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      HEALTHCHECK_URL: http://127.0.0.1:8080/health
+    expose:
+      - "8080"
+    restart: unless-stopped
+    networks:
+      - atlas-network
+    healthcheck:
+      test: ["CMD", "dotnet", "Atlas.Api.dll", "--healthcheck"]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+
+  atlas-frontend:
+    image: ${FRONTEND_IMAGE:-ghcr.io/lucurlings/atlas-expeditions-through-time-frontend}:${IMAGE_TAG:-latest}
+    container_name: atlas-frontend
+    pull_policy: always
+    environment:
+      ATLAS_SITE_URL: https://atlas.$DOMAINNAME
+    restart: unless-stopped
+    networks:
+      - atlas-network
+      - t3_proxy
+    healthcheck:
+      test:
+        - CMD
+        - wget
+        - --quiet
+        - --tries=1
+        - --spider
+        - http://127.0.0.1/healthz
+      interval: 10s
+      timeout: 3s
+      start_period: 5s
+      retries: 3
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.atlas.entrypoints=websecure"
+      - "traefik.http.routers.atlas.rule=Host(`atlas.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.atlas.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.atlas.service=atlas-svc"
+      - "traefik.http.services.atlas-svc.loadbalancer.server.port=80"
+
+networks:
+  atlas-network:

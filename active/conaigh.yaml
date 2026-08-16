@@ -1,0 +1,78 @@
+name: conaigh
+
+services:
+  migrator:
+    image: ghcr.io/lucurlings/conaigh-migrator:${IMAGE_TAG:-latest}
+    environment: &dotnet-environment
+      ConnectionStrings__Postgres: ${POSTGRES_CONNECTION_STRING:?required}
+      ObjectStorage__Endpoint: ${OBJECT_STORAGE_ENDPOINT:?required}
+      ObjectStorage__AccessKey: ${OBJECT_STORAGE_ACCESS_KEY:?required}
+      ObjectStorage__SecretKey: ${OBJECT_STORAGE_SECRET_KEY:?required}
+      ObjectStorage__DevelopmentMediaBucket: ${DEVELOPMENT_MEDIA_BUCKET:?required}
+      ObjectStorage__ResidencyEvidenceBucket: ${RESIDENCY_EVIDENCE_BUCKET:?required}
+      ObjectStorage__QuarantineBucket: ${QUARANTINE_BUCKET:?required}
+      ObjectStorage__ForcePathStyle: ${OBJECT_STORAGE_FORCE_PATH_STYLE:-true}
+      Email__Host: ${SMTP_HOST:?required}
+      Email__Port: ${SMTP_PORT:-587}
+      Email__FromAddress: ${SMTP_FROM_ADDRESS:?required}
+      Email__FromName: ${SMTP_FROM_NAME:-Conaigh}
+      Frontend__Origin: ${FRONTEND_ORIGIN:?required}
+      BackgroundJobs__WorkerEnabled: 'false'
+      BackgroundJobs__ProviderAttempts: ${MODERATION_PROVIDER_ATTEMPTS:-3}
+      BackgroundJobs__ReconciliationMinutes: ${MODERATION_RECONCILIATION_MINUTES:-5}
+      BackgroundJobs__StaleAfterMinutes: ${MODERATION_STALE_MINUTES:-10}
+      Moderation__Provider: ${MODERATION_PROVIDER:-fake}
+      Moderation__Endpoint: ${MODERATION_ENDPOINT:-}
+      Moderation__ApiKey: ${MODERATION_API_KEY:-}
+      Moderation__Model: ${MODERATION_MODEL:-local-fake-v1}
+      Moderation__PromptVersion: ${MODERATION_PROMPT_VERSION:-1.0}
+      Moderation__TimeoutSeconds: ${MODERATION_TIMEOUT_SECONDS:-15}
+      Moderation__RequireZeroDataRetention: ${MODERATION_REQUIRE_ZDR:-true}
+      Authentication__CookieLifetimeDays: ${AUTH_COOKIE_LIFETIME_DAYS:-14}
+      Authentication__SecurityStampValidationMinutes: ${AUTH_SECURITY_STAMP_MINUTES:-5}
+      Authentication__TokenLifetimeHours: ${AUTH_TOKEN_LIFETIME_HOURS:-24}
+      Authentication__LockoutAttempts: ${AUTH_LOCKOUT_ATTEMPTS:-5}
+      Authentication__LockoutMinutes: ${AUTH_LOCKOUT_MINUTES:-15}
+      AuthenticationRateLimits__RegistrationPerIp: ${AUTH_RATE_REGISTRATION_IP:-20}
+      AuthenticationRateLimits__RegistrationPerAccount: ${AUTH_RATE_REGISTRATION_ACCOUNT:-3}
+      AuthenticationRateLimits__SignInPerIp: ${AUTH_RATE_SIGNIN_IP:-40}
+      AuthenticationRateLimits__SignInPerAccount: ${AUTH_RATE_SIGNIN_ACCOUNT:-10}
+      AuthenticationRateLimits__RecoveryPerIp: ${AUTH_RATE_RECOVERY_IP:-30}
+      AuthenticationRateLimits__RecoveryPerAccount: ${AUTH_RATE_RECOVERY_ACCOUNT:-5}
+      AuthenticationRateLimits__WindowMinutes: ${AUTH_RATE_WINDOW_MINUTES:-15}
+      PublicReviewRateLimits__ReportsPerIp: ${PUBLIC_REVIEW_REPORT_RATE_IP:-30}
+      PublicReviewRateLimits__WindowMinutes: ${PUBLIC_REVIEW_RATE_WINDOW_MINUTES:-15}
+      DevelopmentAdministrator__Enabled: 'false'
+      CatalogueSeed__Enabled: 'false'
+    restart: 'no'
+
+  api:
+    image: ghcr.io/lucurlings/conaigh-api:${IMAGE_TAG:-latest}
+    environment:
+      <<: *dotnet-environment
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_FORWARDEDHEADERS_ENABLED: 'true'
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  worker:
+    image: ghcr.io/lucurlings/conaigh-worker:${IMAGE_TAG:-latest}
+    environment:
+      <<: *dotnet-environment
+      DOTNET_ENVIRONMENT: Production
+      BackgroundJobs__WorkerEnabled: 'true'
+    depends_on:
+      migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  frontend:
+    image: ghcr.io/lucurlings/conaigh-frontend:${IMAGE_TAG:-latest}
+    depends_on:
+      api:
+        condition: service_healthy
+    ports:
+      - '${FRONTEND_PORT:-3000}:80'
+    restart: unless-stopped

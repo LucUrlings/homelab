@@ -1,0 +1,20 @@
+services:
+  rclone:
+    container_name: rclone
+    image: rclone/rclone:latest
+    restart: unless-stopped
+    environment:
+      TZ: ${TZ}
+      RCLONE_CONFIG: /config/rclone/rclone.conf
+    volumes:
+      - ${DOCKERDIR}:/source:ro
+      - ${DOCKERDIR}/appdata/rclone:/config/rclone
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while true; do
+          if ! rclone sync /source "${RCLONE_REMOTE_NAME:-google-drive}:${RCLONE_REMOTE_PATH:-homelab-configs}" --config /config/rclone/rclone.conf --delete-during --exclude "/.git/**" --log-level INFO; then
+            echo "rclone sync failed; retrying after the configured interval" >&2
+          fi
+          sleep "${RCLONE_SYNC_INTERVAL_SECONDS:-86400}"
+        done

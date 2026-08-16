@@ -1,0 +1,59 @@
+services:
+  umami:
+    container_name: umami
+    image: ghcr.io/umami-software/umami:latest
+    environment:
+      DATABASE_URL: postgresql://$UMAMI_POSTGRES_USER:$UMAMI_POSTGRES_PASSWORD@umami_db:5432/$UMAMI_POSTGRES_DB
+      APP_SECRET: $UMAMI_APP_SECRET
+    depends_on:
+      umami_db:
+        condition: service_healthy
+    init: true
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "curl http://localhost:3000/api/heartbeat"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - t3_proxy
+      - umami-network
+    labels:
+      - "traefik.enable=true"
+
+      # Public Umami scripts and API: no OAuth
+      - "traefik.http.routers.umami-public-rtr.entrypoints=websecure"
+      - "traefik.http.routers.umami-public-rtr.rule=Host(`umami.$DOMAINNAME`) && (Path(`/script.js`) || Path(`/recorder.js`) || PathPrefix(`/api/`))"
+      - "traefik.http.routers.umami-public-rtr.priority=100"
+      - "traefik.http.routers.umami-public-rtr.service=umami-svc"
+
+      # Umami dashboard: OAuth protected
+      - "traefik.http.routers.umami-rtr.entrypoints=websecure"
+      - "traefik.http.routers.umami-rtr.rule=Host(`umami.$DOMAINNAME`)"
+      - "traefik.http.routers.umami-rtr.priority=99"
+      - "traefik.http.routers.umami-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.umami-rtr.service=umami-svc"
+
+      # Umami service
+      - "traefik.http.services.umami-svc.loadbalancer.server.port=3000"
+  umami_db:
+    container_name: umami_db
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: $UMAMI_POSTGRES_DB
+      POSTGRES_USER: $UMAMI_POSTGRES_USER
+      POSTGRES_PASSWORD: $UMAMI_POSTGRES_PASSWORD
+    volumes:
+      - umami-db-data:/var/lib/postgresql/data
+    networks:
+      - umami-network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+volumes:
+  umami-db-data:
+networks:
+  umami-network:

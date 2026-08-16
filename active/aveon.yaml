@@ -2,6 +2,7 @@ services:
   aveon:
     image: ghcr.io/lucurlings/aveon:latest
     container_name: aveon
+    mem_limit: 3g
     restart: unless-stopped
     depends_on:
       aveon-redis:
@@ -10,14 +11,23 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
+      AVEON_PUBLIC_URL: ${AVEON_PUBLIC_URL:?AVEON_PUBLIC_URL must be set}
       FlightApi__ApiKey: ${AVEON_FLIGHTAPI_API_KEY}
+      FlightApi__MaxConcurrentRequests: ${FLIGHTAPI_MAX_CONCURRENT_REQUESTS:-5}
       Redis__ConnectionString: aveon-redis:6379
       Redis__FlightApiOneWayTtlMinutes: ${AVEON_REDIS_FLIGHT_API_ONE_WAY_TTL_MINUTES:-30}
       Redis__AirportDataTtlMinutes: ${AVEON_REDIS_AIRPORT_DATA_TTL_MINUTES:-10080}
       Redis__SearchSessionTtlMinutes: ${AVEON_REDIS_SEARCH_SESSION_TTL_MINUTES:-30}
-      Search__MaxSearchCombinations: ${AVEON_SEARCH_MAX_SEARCH_COMBINATIONS:-100}
       Search__AnonymousMaxSearchCombinations: ${AVEON_SEARCH_ANONYMOUS_MAX_SEARCH_COMBINATIONS:-15}
       Search__UserMaxSearchCombinations: ${AVEON_SEARCH_USER_MAX_SEARCH_COMBINATIONS:-100}
+      Search__ExecutionTimeoutMinutes: ${AVEON_SEARCH_EXECUTION_TIMEOUT_MINUTES:-10}
+      MultiDestinationSearch__Enabled: ${AVEON_MULTI_DESTINATION_SEARCH_ENABLED:-true}
+      MultiDestinationSearch__AnonymousMaxProviderCalls: ${AVEON_MULTI_DESTINATION_ANONYMOUS_MAX_PROVIDER_CALLS:-25}
+      MultiDestinationSearch__UserMaxProviderCalls: ${AVEON_MULTI_DESTINATION_USER_MAX_PROVIDER_CALLS:-100}
+      MultiDestinationSearch__AdminMaxProviderCalls: ${AVEON_MULTI_DESTINATION_ADMIN_MAX_PROVIDER_CALLS:-250}
+      MultiDestinationSearch__ExecutionTimeoutMinutes: ${AVEON_MULTI_DESTINATION_EXECUTION_TIMEOUT_MINUTES:-10}
+      MultiDestinationSearch__MaxActiveStates: ${AVEON_MULTI_DESTINATION_MAX_ACTIVE_STATES:-10000}
+      MultiDestinationSearch__MaxEvaluatedStates: ${AVEON_MULTI_DESTINATION_MAX_EVALUATED_STATES:-500000}
       ConnectionStrings__Default: Host=aveon-postgres;Port=5432;Database=${AVEON_POSTGRES_DB:-aveon};Username=${AVEON_POSTGRES_USER:-aveon};Password=${AVEON_POSTGRES_PASSWORD:-aveon_dev_password}
     networks:
       - aveon-network
@@ -54,6 +64,7 @@ services:
 
   aveon-redis:
     image: redis:7-alpine
+    mem_limit: 768m
     container_name: aveon-redis
     restart: unless-stopped
     command: ["redis-server", "--appendonly", "yes"]

@@ -78,7 +78,6 @@ include:
 
   - $USERDIR/docker/homelab/active/dawarich.yaml
   
-  - $USERDIR/docker/homelab/active/huntarr.yaml
   - $USERDIR/docker/homelab/active/jellyfin.yaml
   - $USERDIR/docker/homelab/active/seerr.yaml
   - $USERDIR/docker/homelab/active/whoami.yaml
@@ -104,10 +103,15 @@ include:
 
   - $USERDIR/docker/homelab/active/mqtt.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
+  - $USERDIR/docker/homelab/active/rclone.yaml
   - $USERDIR/docker/homelab/active/kitchen-owl.yaml
 
   - $USERDIR/docker/homelab/active/n8n.yaml
 
   - $USERDIR/docker/homelab/active/aveon.yaml
   - $USERDIR/docker/homelab/active/ruview.yaml
+  - $USERDIR/docker/homelab/active/minio.yaml
+
+  - $USERDIR/docker/homelab/active/umami.yaml
   - $USERDIR/docker/homelab/active/lucurlings.nl.yaml
+  - $USERDIR/docker/homelab/active/atlas.yaml

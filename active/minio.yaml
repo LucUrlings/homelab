@@ -1,0 +1,43 @@
+services:
+  minio:
+    image: quay.io/minio/aistor/minio:RELEASE.2026-07-24T16-43-31Z
+    container_name: aistor
+    restart: unless-stopped
+    command:
+      - server
+      - --console-address
+      - ":9001"
+      - /data
+      - --license
+      - /minio.license
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required}
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:?MINIO_BROWSER_REDIRECT_URL is required}
+      MINIO_KMS_SECRET_KEY_FILE: /run/secrets/minio-kms.key
+    volumes:
+      - /home/luc/docker/homelab/mnt-storage/minio-storage:/data
+      - /home/luc/docker/homelab/homelab-configs/secrets/minio/minio.license:/minio.license:ro
+      - /home/luc/docker/homelab/homelab-configs/secrets/minio/minio-kms.key:/run/secrets/minio-kms.key:ro
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.minio-s3.entrypoints=websecure"
+      - "traefik.http.routers.minio-s3.rule=Host(`s3-minio.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.minio-s3.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.minio-s3.service=minio-s3-svc"
+      - "traefik.http.services.minio-s3-svc.loadbalancer.server.port=9000"
+
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.minio-console.entrypoints=websecure"
+      - "traefik.http.routers.minio-console.rule=Host(`console-minio.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.minio-console.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.minio-console.service=minio-console-svc"
+      - "traefik.http.services.minio-console-svc.loadbalancer.server.port=9001"
