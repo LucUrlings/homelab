@@ -108,7 +108,7 @@ docker compose -f docker-compose.main.yaml logs -f traefik
 
 Set it up from the GitHub repository page under **Settings → Actions → Runners → New self-hosted runner**. Follow GitHub's generated Linux installation commands, add the `homelab` label when registering the runner, and keep the registration token out of the repository. The runner service user must be able to use the existing SSH key for `origin` and must be in the Docker group.
 
-On every push to `main`, the workflow fast-forwards `/home/luc/docker/homelab`, then deploys each active Compose include as its own sequential matrix job. Each job builds a temporary Compose root containing the shared networks and secrets plus one active file, validates it, pulls its images, and runs its own `up -d`. A failed stack can therefore be rerun independently from GitHub Actions. It refuses to deploy if the checkout has local changes. Because a self-hosted runner can execute shell commands on this server, protect the `main` branch and only allow trusted changes to merge.
+On every push to `main`, the workflow fast-forwards `/home/luc/docker/homelab`, then deploys each active Compose include as its own matrix job, allowing up to five stacks to run in parallel when five `homelab` runner slots are available. Each job builds a temporary Compose root containing the shared networks and secrets plus one active file, validates it, pulls its images, and runs its own `up -d`. A failed stack can therefore be rerun independently from GitHub Actions. It refuses to deploy if the checkout has local changes. Because a self-hosted runner can execute shell commands on this server, protect the `main` branch and only allow trusted changes to merge.
 
 The same behavior is available locally. Run every active stack, or select one by filename:
 
@@ -117,7 +117,7 @@ scripts/deploy-compose-stacks.sh --env-file homelab-configs/.env
 scripts/deploy-compose-stacks.sh --env-file homelab-configs/.env --stack gatus.yaml
 ```
 
-`workflow_dispatch` accepts the same stack filename (or `all`) through its `stack` input. Matrix jobs are deliberately sequential because the stacks share Docker networks and some host resources, while remaining independently rerunnable.
+`workflow_dispatch` accepts the same stack filename (or `all`) through its `stack` input. CI is capped at five concurrent jobs to balance deployment speed against shared Docker resources; separate workflow runs remain locked by the deployment concurrency group. A single self-hosted runner still executes one job at a time, so additional runner slots are needed for actual parallelism.
 
 ## Currently Included Stacks
 
