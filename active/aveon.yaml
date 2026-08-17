@@ -14,10 +14,20 @@ services:
       AVEON_PUBLIC_URL: ${AVEON_PUBLIC_URL:?AVEON_PUBLIC_URL must be set}
       FlightApi__ApiKey: ${AVEON_FLIGHTAPI_API_KEY}
       FlightApi__MaxConcurrentRequests: ${FLIGHTAPI_MAX_CONCURRENT_REQUESTS:-5}
+      FlightApi__MaxSchedulePages: ${FLIGHTAPI_MAX_SCHEDULE_PAGES:-10}
       Redis__ConnectionString: aveon-redis:6379
       Redis__FlightApiOneWayTtlMinutes: ${AVEON_REDIS_FLIGHT_API_ONE_WAY_TTL_MINUTES:-30}
       Redis__AirportDataTtlMinutes: ${AVEON_REDIS_AIRPORT_DATA_TTL_MINUTES:-10080}
+      Redis__ExploreRoutesTtlMinutes: ${REDIS_EXPLORE_ROUTES_TTL_MINUTES:-10080}
+      Redis__HeroRoutesTtlMinutes: ${REDIS_HERO_ROUTES_TTL_MINUTES:-43200}
+      Redis__ExploreRoutesRetentionMinutes: ${REDIS_EXPLORE_ROUTES_RETENTION_MINUTES:-43200}
+      Redis__HeroRoutesRetentionMinutes: ${REDIS_HERO_ROUTES_RETENTION_MINUTES:-129600}
       Redis__SearchSessionTtlMinutes: ${AVEON_REDIS_SEARCH_SESSION_TTL_MINUTES:-30}
+      AirportCatalog__RefreshEnabled: ${AIRPORT_CATALOG_REFRESH_ENABLED:-true}
+      AirportCatalog__SourceUrl: ${AIRPORT_CATALOG_SOURCE_URL:-https://raw.githubusercontent.com/mborsetti/airportsdata/main/airportsdata/airports.csv}
+      AirportCatalog__RevisionApiUrl: ${AIRPORT_CATALOG_REVISION_API_URL:-https://api.github.com/repos/mborsetti/airportsdata/commits?path=airportsdata%2Fairports.csv&per_page=1}
+      AirportCatalog__RevisionDownloadUrlTemplate: ${AIRPORT_CATALOG_REVISION_DOWNLOAD_URL_TEMPLATE:-https://raw.githubusercontent.com/mborsetti/airportsdata/{revision}/airportsdata/airports.csv}
+      AirportCatalog__RefreshAgeDays: ${AIRPORT_CATALOG_REFRESH_AGE_DAYS:-30}
       Search__AnonymousMaxSearchCombinations: ${AVEON_SEARCH_ANONYMOUS_MAX_SEARCH_COMBINATIONS:-15}
       Search__UserMaxSearchCombinations: ${AVEON_SEARCH_USER_MAX_SEARCH_COMBINATIONS:-100}
       Search__ExecutionTimeoutMinutes: ${AVEON_SEARCH_EXECUTION_TIMEOUT_MINUTES:-10}
