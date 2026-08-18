@@ -5,12 +5,6 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      stack:
-        description: "Stack to deploy (all or a filename such as gatus.yaml)"
-        required: false
-        default: all
-        type: string
 
 concurrency:
   group: homelab-deploy
@@ -19,13 +13,11 @@ concurrency:
 permissions: {}
 
 jobs:
-  discover:
+  deploy:
     runs-on:
       - self-hosted
       - homelab
-    timeout-minutes: 10
-    outputs:
-      stacks: ${{ steps.stacks.outputs.stacks }}
+    timeout-minutes: 30
 
     steps:
       - name: Update deployment checkout
@@ -43,54 +35,26 @@ jobs:
           git fetch --prune origin main
           git merge --ff-only origin/main
 
-      - name: Select stacks
-        id: stacks
+      - name: Pull latest images
         working-directory: /home/luc/docker/homelab
-        env:
-          REQUESTED_STACK: ${{ inputs.stack }}
-        run: |
-          set -euo pipefail
-
-          requested_stack=${REQUESTED_STACK:-all}
-          stacks_json='['
-          separator=
-          while IFS= read -r stack; do
-            stacks_json+="${separator}\"${stack}\""
-            separator=,
-          done < <(scripts/deploy-compose-stacks.sh --list --stack "$requested_stack")
-          stacks_json+=']'
-          printf 'stacks=%s\n' "$stacks_json" >> "$GITHUB_OUTPUT"
-
-  deploy:
-    needs: discover
-    if: needs.discover.result == 'success'
-    strategy:
-      fail-fast: false
-      max-parallel: 5
-      matrix:
-        stack: ${{ fromJSON(needs.discover.outputs.stacks) }}
-    runs-on:
-      - self-hosted
-      - homelab
-    timeout-minutes: 30
-
-    steps:
-      - name: Confirm deployment checkout
-        working-directory: /home/luc/docker/homelab
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          if [[ -n "$(git status --porcelain)" ]]; then
-            echo "The deployment checkout has local changes; refusing to deploy over them." >&2
-            git status --short >&2
-            exit 1
-          fi
-
-      - name: Deploy ${{ matrix.stack }}
-        working-directory: /home/luc/docker/homelab
-        shell: bash
         run: >-
-          scripts/deploy-compose-stacks.sh
+          docker compose
           --env-file homelab-configs/.env
-          --stack "${{ matrix.stack }}"
+          -f docker-compose.main.yaml
+          pull
+
+      - name: Validate Compose configuration
+        working-directory: /home/luc/docker/homelab
+        run: >-
+          docker compose
+          --env-file homelab-configs/.env
+          -f docker-compose.main.yaml
+          config --quiet
+
+      - name: Deploy stack
+        working-directory: /home/luc/docker/homelab
+        run: >-
+          docker compose
+          --env-file homelab-configs/.env
+          -f docker-compose.main.yaml
+          up -d
