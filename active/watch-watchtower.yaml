@@ -1,7 +1,7 @@
 name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}
 
 x-database-environment: &database-environment
-  ConnectionStrings__Postgres: Host=watchtower-postgres;Port=5432;Database=${WATCHTOWER_POSTGRES_DB:-watchtower};Username=${WATCHTOWER_POSTGRES_USER:-watchtower};Password=${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD}
+  ConnectionStrings__Postgres: Host=watchtower-postgres;Port=5432;Database=${WATCHTOWER_POSTGRES_DB:-watchtower};Username=${WATCHTOWER_POSTGRES_USER:-watchtower};Password=${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD};GSS Encryption Mode=Disable
 
 x-rabbitmq-environment: &rabbitmq-environment
   RabbitMq__Host: watchtower-rabbitmq
@@ -136,7 +136,7 @@ services:
     working_dir: /app/migrator
     entrypoint: ["dotnet", "/app/migrator/Watchtower.Migrator.dll"]
     environment:
-      ConnectionStrings__Postgres: Host=watchtower-postgres;Port=5432;Database=${WATCHTOWER_POSTGRES_DB:-watchtower};Username=${WATCHTOWER_POSTGRES_USER:-watchtower};Password=${WATCHTOWER_POSTGRES_PASSWORD:?Set WATCHTOWER_POSTGRES_PASSWORD}
+      <<: *database-environment
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     healthcheck:
       disable: true
@@ -157,6 +157,10 @@ services:
       Infrastructure__Enabled: "true"
       ManagementLinks__RabbitMq: ${WATCHTOWER_RABBITMQ_MANAGEMENT_URL:-}
       ManagementLinks__Minio: ${WATCHTOWER_MINIO_CONSOLE_URL:-}
+      RabbitMqManagement__Endpoint: http://watchtower-rabbitmq:15672
+      RabbitMqManagement__UserName: ${WATCHTOWER_RABBITMQ_USER:-watchtower}
+      RabbitMqManagement__Password: ${WATCHTOWER_RABBITMQ_PASSWORD:?Set WATCHTOWER_RABBITMQ_PASSWORD}
+      RabbitMqManagement__VirtualHost: /
     # ports:
     #   - "${WATCHTOWER_HTTP_BIND_ADDRESS:-127.0.0.1}:${WATCHTOWER_HTTP_PORT:-8080}:8080"
     networks:
