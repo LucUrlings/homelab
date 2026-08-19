@@ -16,6 +16,9 @@ x-object-storage-environment: &object-storage-environment
   ObjectStorage__Bucket: ${WATCHTOWER_MINIO_MEDIA_BUCKET:-watchtower-media}
   ObjectStorage__UseSsl: "false"
 
+x-error-reporting-environment: &error-reporting-environment
+  Sentry__Dsn: ${WATCHTOWER_SENTRY_DSN:-}
+
 x-application-service: &application-service
   image: ${WATCHTOWER_IMAGE:-ghcr.io/lucurlings/watchtower}:${WATCHTOWER_IMAGE_TAG:-latest}
   pull_policy: always
@@ -136,7 +139,7 @@ services:
     working_dir: /app/migrator
     entrypoint: ["dotnet", "/app/migrator/Watchtower.Migrator.dll"]
     environment:
-      <<: *database-environment
+      <<: [*database-environment, *error-reporting-environment]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     healthcheck:
       disable: true
@@ -149,7 +152,12 @@ services:
     <<: *application-service
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-web
     environment:
-      <<: [*database-environment, *object-storage-environment]
+      <<:
+        [
+          *database-environment,
+          *object-storage-environment,
+          *error-reporting-environment,
+        ]
       ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_HTTP_PORTS: "8080"
       AllowedHosts: ${WATCHTOWER_ALLOWED_HOSTS:-*}
@@ -201,6 +209,7 @@ services:
           *database-environment,
           *rabbitmq-environment,
           *object-storage-environment,
+          *error-reporting-environment,
         ]
       Chrono24__FlareSolverrEndpoint: http://watchtower-flaresolverr:8191/v1
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
@@ -229,7 +238,7 @@ services:
     working_dir: /app/scheduler
     entrypoint: ["dotnet", "/app/scheduler/Watchtower.Scheduler.dll"]
     environment:
-      <<: *database-environment
+      <<: [*database-environment, *error-reporting-environment]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     depends_on:
       watchtower-migrator:
