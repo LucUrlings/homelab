@@ -1,0 +1,65 @@
+services:
+  bugsink-db:
+    image: postgres:17-alpine
+    container_name: bugsink-db
+    networks:
+      - bugsink-network
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${BUGSINK_DB_USER:-bugsinkuser}
+      POSTGRES_PASSWORD: ${BUGSINK_DB_PASSWORD:?BUGSINK_DB_PASSWORD must be set}
+      POSTGRES_DB: ${BUGSINK_DB_NAME:-bugsink}
+    volumes:
+      - bugsink-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      retries: 5
+      start_period: 10s
+      interval: 5s
+      timeout: 5s
+
+  bugsink-web:
+    container_name: bugsink-web
+    image: bugsink/bugsink:2
+    depends_on:
+      bugsink-db:
+        condition: service_healthy
+    networks:
+      - bugsink-network
+      - t3_proxy
+    restart: unless-stopped
+    environment:
+      SECRET_KEY: ${BUGSINK_SECRET_KEY:?BUGSINK_SECRET_KEY must be set}
+      CREATE_SUPERUSER: ${BUGSINK_CREATE_SUPERUSER:-}
+      PORT: 8000
+      DATABASE_URL: postgresql://${BUGSINK_DB_USER:-bugsinkuser}:${BUGSINK_DB_PASSWORD:?BUGSINK_DB_PASSWORD must be set}@bugsink-db:5432/${BUGSINK_DB_NAME:-bugsink}
+      BEHIND_HTTPS_PROXY: "true"
+      USE_X_FORWARDED_HOST: "true"
+      # Prefer X-Real-IP when your proxy supports it. To use X-Forwarded-For instead, set USE_X_REAL_IP to false and
+      # uncomment both settings below.
+      # USE_X_REAL_IP: "false"
+      # USE_X_FORWARDED_FOR: "true"
+      # X_FORWARDED_FOR_PROXY_COUNT: "1"
+      BASE_URL: "https://bugsink.$DOMAINNAME"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c 'import requests; requests.get(\"http://localhost:8000/health/ready\").raise_for_status()'"]
+      interval: 5s
+      timeout: 20s
+      retries: 10
+
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.bugsink.entrypoints=websecure"
+      - "traefik.http.routers.bugsink.rule=Host(`bugsink.$DOMAINNAME`)"
+      # Middlewares
+      # - "traefik.http.routers.bugsink.middlewares=middlewares-basic-auth@file" # For Basic HTTP Authentication
+      # Http Services
+      - "traefik.http.routers.bugsink.service=bugsink-svc"
+      - "traefik.http.services.bugsink-svc.loadbalancer.server.port=8000"
+
+volumes:
+  bugsink-db-data:
+
+networks:
+  bugsink-network:
