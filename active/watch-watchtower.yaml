@@ -155,6 +155,7 @@ services:
       AllowedHosts: ${WATCHTOWER_ALLOWED_HOSTS:-*}
       HEALTHCHECK_URL: http://127.0.0.1:8080/health
       Infrastructure__Enabled: "true"
+      CurrencyConversion__Endpoint: ${WATCHTOWER_CURRENCY_CONVERSION_ENDPOINT:-https://api.frankfurter.dev}
       ManagementLinks__RabbitMq: ${WATCHTOWER_RABBITMQ_MANAGEMENT_URL:-}
       ManagementLinks__Minio: ${WATCHTOWER_MINIO_CONSOLE_URL:-}
       RabbitMqManagement__Endpoint: http://watchtower-rabbitmq:15672
