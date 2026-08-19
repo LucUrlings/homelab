@@ -213,7 +213,7 @@ services:
         ]
       Chrono24__FlareSolverrEndpoint: http://watchtower-flaresolverr:8191/v1
       Chrono24__MaximumConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-5}
-      Chrono24__RequestDelayMilliseconds: ${WATCHTOWER_CHRONO24_REQUEST_DELAY_MILLISECONDS:-300}
+      Chrono24__RequestDelayMilliseconds: ${WATCHTOWER_CHRONO24_REQUEST_DELAY_MILLISECONDS:-100}
       Chrono24__DirectRequestCooldownSeconds: ${WATCHTOWER_CHRONO24_DIRECT_REQUEST_COOLDOWN_SECONDS:-300}
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     networks:
