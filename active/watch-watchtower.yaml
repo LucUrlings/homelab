@@ -86,6 +86,7 @@ services:
   watchtower-flaresolverr:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-flaresolverr
     image: ${WATCHTOWER_FLARESOLVERR_IMAGE:-ghcr.io/flaresolverr/flaresolverr:v3.5.0}
+    shm_size: ${WATCHTOWER_FLARESOLVERR_SHM_SIZE:-1gb}
     environment:
       LOG_LEVEL: info
       LOG_HTML: "false"
@@ -212,9 +213,8 @@ services:
           *error-reporting-environment,
         ]
       Chrono24__FlareSolverrEndpoint: http://watchtower-flaresolverr:8191/v1
-      Chrono24__MaximumConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-5}
-      Chrono24__RequestDelayMilliseconds: ${WATCHTOWER_CHRONO24_REQUEST_DELAY_MILLISECONDS:-100}
-      Chrono24__DirectRequestCooldownSeconds: ${WATCHTOWER_CHRONO24_DIRECT_REQUEST_COOLDOWN_SECONDS:-300}
+      Chrono24__MaximumConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-3}
+      Chrono24__RequestDelayMilliseconds: ${WATCHTOWER_CHRONO24_REQUEST_DELAY_MILLISECONDS:-0}
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     networks:
       - watchtower-application
