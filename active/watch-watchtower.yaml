@@ -21,14 +21,14 @@ x-error-reporting-environment: &error-reporting-environment
 
 x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__PollIntervalMilliseconds: ${WATCHTOWER_WORKER_POLICY_POLL_INTERVAL_MILLISECONDS:-2000}
-  WorkerPolicies__Chrono24DiscoveryDefaultConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-3}
+  WorkerPolicies__Chrono24DiscoveryDefaultConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-1}
   WorkerPolicies__Chrono24DiscoveryHardMaximum: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-3}
   WorkerPolicies__Chrono24DetailDefaultConcurrency: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-3}
-  WorkerPolicies__Chrono24DetailHardMaximum: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-3}
-  WorkerPolicies__ImageDefaultConcurrency: ${WATCHTOWER_WORKER_IMAGE_DEFAULT_CONCURRENCY:-1}
-  WorkerPolicies__ImageHardMaximum: ${WATCHTOWER_WORKER_IMAGE_HARD_MAXIMUM:-16}
+  WorkerPolicies__Chrono24DetailHardMaximum: ${WATCHTOWER_CHRONO24_MAXIMUM_CONCURRENCY:-10}
+  WorkerPolicies__ImageDefaultConcurrency: ${WATCHTOWER_WORKER_IMAGE_DEFAULT_CONCURRENCY:-2}
+  WorkerPolicies__ImageHardMaximum: ${WATCHTOWER_WORKER_IMAGE_HARD_MAXIMUM:-10}
   WorkerPolicies__SimilarityProjectionDefaultConcurrency: ${WATCHTOWER_WORKER_SIMILARITY_DEFAULT_CONCURRENCY:-1}
-  WorkerPolicies__SimilarityProjectionHardMaximum: ${WATCHTOWER_WORKER_SIMILARITY_HARD_MAXIMUM:-2}
+  WorkerPolicies__SimilarityProjectionHardMaximum: ${WATCHTOWER_WORKER_SIMILARITY_HARD_MAXIMUM:-5}
 
 
 x-application-service: &application-service
