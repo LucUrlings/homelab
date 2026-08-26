@@ -10,3 +10,6 @@ internal-storage/
 
 appdata/tubesync/
 appdata/tubesync/db.sqlite3
+
+/active/dev/**/*.env
+active/dev/telegram-bot-token
