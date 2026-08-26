@@ -28,8 +28,8 @@ services:
       AirportCatalog__RevisionApiUrl: ${AIRPORT_CATALOG_REVISION_API_URL:-https://api.github.com/repos/mborsetti/airportsdata/commits?path=airportsdata%2Fairports.csv&per_page=1}
       AirportCatalog__RevisionDownloadUrlTemplate: ${AIRPORT_CATALOG_REVISION_DOWNLOAD_URL_TEMPLATE:-https://raw.githubusercontent.com/mborsetti/airportsdata/{revision}/airportsdata/airports.csv}
       AirportCatalog__RefreshAgeDays: ${AIRPORT_CATALOG_REFRESH_AGE_DAYS:-30}
-      Search__AnonymousMaxSearchCombinations: ${AVEON_SEARCH_ANONYMOUS_MAX_SEARCH_COMBINATIONS:-15}
-      Search__UserMaxSearchCombinations: ${AVEON_SEARCH_USER_MAX_SEARCH_COMBINATIONS:-100}
+      Search__AnonymousMaxSearchCombinations: ${SEARCH_ANONYMOUS_MAX_SEARCH_COMBINATIONS:-75}
+      Search__UserMaxSearchCombinations: ${SEARCH_USER_MAX_SEARCH_COMBINATIONS:-200}
       Search__ExecutionTimeoutMinutes: ${AVEON_SEARCH_EXECUTION_TIMEOUT_MINUTES:-10}
       MultiDestinationSearch__Enabled: ${AVEON_MULTI_DESTINATION_SEARCH_ENABLED:-true}
       MultiDestinationSearch__AnonymousMaxProviderCalls: ${AVEON_MULTI_DESTINATION_ANONYMOUS_MAX_PROVIDER_CALLS:-25}
