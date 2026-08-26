@@ -176,7 +176,7 @@ services:
         ]
       ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_HTTP_PORTS: "8080"
-      AllowedHosts: ${WATCHTOWER_ALLOWED_HOSTS:-*}
+      WATCHTOWER_ALLOWED_HOSTS: watch.lucurlings.nl;localhost;127.0.0.1
       HEALTHCHECK_URL: http://127.0.0.1:8080/health
       Infrastructure__Enabled: "true"
       CurrencyConversion__Endpoint: ${WATCHTOWER_CURRENCY_CONVERSION_ENDPOINT:-https://api.frankfurter.dev}
