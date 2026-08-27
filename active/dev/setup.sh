@@ -19,9 +19,16 @@ root() {
 compose_hub() { docker compose --env-file "$HERE/hub.env" -f "$HERE/hub.compose.yml" "$@"; }
 
 ensure_bundle() {
-  local file
-  for file in hub.compose.yml hub.env.example workspace.compose.yml workspace.env.example workspace.docker-host.override.yml; do
-    [[ -f $HERE/$file ]] || curl -fsSL "$RAW/$file" -o "$HERE/$file" || die "could not download $file"
+  local refresh=${1:-false} file temporary
+  for file in hub.compose.yml hub.env.example workspace.compose.yml workspace.env.example; do
+    if [[ $refresh == true || ! -f $HERE/$file ]]; then
+      temporary=$HERE/.$file.$$
+      curl -fsSL "$RAW/$file" -o "$temporary" || {
+        rm -f -- "$temporary"
+        die "could not download $file"
+      }
+      mv -- "$temporary" "$HERE/$file"
+    fi
   done
 }
 
@@ -36,6 +43,10 @@ usage() {
 Usage:
   ./setup.sh install --agent codex|claude|none [global options]
   ./setup.sh create <repo> [--name NAME] [--branch BRANCH] [--depth N]
+                          [--preview-port PORT] [--ssh-port PORT]
+  ./setup.sh agent PROJECT codex|claude|shell
+  ./setup.sh update [PROJECT]
+  ./setup.sh teardown PROJECT|--all
   ./setup.sh list
   ./setup.sh telegram --token-file PATH --allowed-users IDS --group-id ID
   ./setup.sh login github|codex|claude
@@ -112,10 +123,15 @@ install_cmd() {
   valid_domain "$domain" || die "invalid base domain"
   [[ $network =~ ^[A-Za-z0-9_.-]+$ ]] || die "invalid Traefik network"
   [[ $middleware =~ ^[A-Za-z0-9_.@:-]+$ ]] || die "invalid OAuth middleware"
-  ensure_bundle
+  ensure_bundle true
   prepare_projects_dir
+  [[ $entrypoint =~ ^[A-Za-z0-9_.-]+$ ]] || die "invalid Traefik entrypoint"
+  [[ -z $resolver || $resolver =~ ^[A-Za-z0-9_.-]+$ ]] || die "invalid certificate resolver"
   root install -d -m 0755 "$STATE/herdr" "$STATE/herdr/run" "$STATE/ccgram" "$STATE/projects"
   root install -d -m 0700 "$STATE/secrets" "$STATE/shared/codex" "$STATE/shared/claude" "$STATE/shared/gh"
+  root install -d -m 0755 "$STATE/ssh"
+  root touch "$STATE/ssh/authorized_keys"
+  root chmod 0600 "$STATE/ssh/authorized_keys"
   [[ -f $HERE/hub.env ]] || cp -- "$HERE/hub.env.example" "$HERE/hub.env"
   chmod 0600 "$HERE/hub.env"
   if [[ -n $key ]]; then install_key "$key"; elif [[ -f $HOME/.ssh/authorized_keys ]]; then install_key "$HOME/.ssh/authorized_keys"; fi
@@ -137,29 +153,177 @@ port_free() {
     configured=$(sed -n 's/^SSH_PORT=//p' "$file")
     [[ $configured == "$port" ]] && return 1
   done
-  command -v ss >/dev/null 2>&1 && ss -H -ltn | awk -v p="$port" '{ x=$4; sub(/^.*:/,"",x); if (x==p) found=1 } END { exit found }'
+  if command -v ss >/dev/null 2>&1; then
+    ss -H -ltn | awk -v p="$port" '{ x=$4; sub(/^.*:/,"",x); if (x==p) found=1 } END { exit found }'
+  fi
 }
 
 next_port() {
-  prepare_projects_dir
-  exec 9>"$PROJECTS/.lock"
-  flock -x 9 || die "flock is required"
-  for port in $(seq 22000 22999); do port_free "$port" && { echo "$port"; flock -u 9; exec 9>&-; return; }; done
-  flock -u 9; exec 9>&-; die "no SSH ports remain in 22000-22999"
+  local port
+  for port in $(seq 22000 22999); do port_free "$port" && { echo "$port"; return; }; done
+  die "no SSH ports remain in 22000-22999"
+}
+
+project_name_from_file() {
+  local file=$1 name
+  name=$(sed -n 's/^PROJECT_NAME=//p' "$file")
+  valid_name "$name" || die "invalid PROJECT_NAME in $file"
+  [[ $file == "$PROJECTS/$name.env" ]] || die "project env filename does not match PROJECT_NAME: $file"
+  printf '%s\n' "$name"
+}
+
+workspace_compose() {
+  local name=$1 file=$2
+  shift 2
+  docker compose --project-name "devctl-$name" --env-file "$file" \
+    -f "$HERE/workspace.compose.yml" "$@"
+}
+
+wait_pane_shell() {
+  local pane=$1 info process
+  for _ in {1..30}; do
+    info=$(compose_hub exec -T herdr herdr pane process-info --pane "$pane" 2>/dev/null || true)
+    process=$(printf '%s\n' "$info" | compose_hub exec -T herdr jq -r \
+      '.result.process_info.foreground_processes[0].name // empty')
+    [[ $process == sh || $process == bash || $process == zsh || $process == fish ]] && return
+    sleep 1
+  done
+  die "Herdr pane $pane did not become ready"
+}
+
+wait_agent() {
+  local pane=$1 agents found
+  for _ in {1..30}; do
+    agents=$(compose_hub exec -T herdr herdr agent list 2>/dev/null || true)
+    # $pane belongs to jq, not the shell.
+    # shellcheck disable=SC2016
+    found=$(printf '%s\n' "$agents" | compose_hub exec -T herdr jq -r --arg pane "$pane" \
+      'any(.result.agents[]?; .pane_id == $pane)')
+    [[ $found == true ]] && return
+    sleep 1
+  done
+  die "agent did not start in Herdr pane $pane; inspect it with 'herdr pane read $pane'"
+}
+
+run_agent_in_pane() {
+  local pane=$1 project=$2 agent=$3
+  compose_hub exec -T herdr herdr pane run "$pane" \
+    "HERDR_AGENT=$agent dev-enter $project $agent; status=\$?; echo '[devctl] $agent exited with status' \"\$status\"" \
+    >/dev/null
 }
 
 herdr_create() {
-  local project=$1 agent=${DEFAULT_AGENT:-none} result workspace pane tab tab_pane
+  local project=$1 agent=${2:-${DEFAULT_AGENT:-none}} result workspace pane shell_tab tab tab_pane
   result=$(compose_hub exec -T herdr herdr workspace create --cwd /srv/devctl/herdr --label "$project" --no-focus)
   workspace=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.workspace.workspace_id')
   pane=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
-  [[ $workspace != null && $pane != null ]] || die "Herdr workspace creation failed"
-  compose_hub exec -T herdr herdr pane run "$pane" "dev-enter $project shell" >/dev/null
-  [[ $agent == none ]] && return
+  shell_tab=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.tab.tab_id')
+  [[ $workspace != null && $pane != null && $shell_tab != null ]] || die "Herdr workspace creation failed"
+  compose_hub exec -T herdr herdr tab rename "$shell_tab" shell >/dev/null
+  wait_pane_shell "$pane"
+  run_agent_in_pane "$pane" "$project" shell
+  [[ $agent == none || $agent == shell ]] && return
   tab=$(compose_hub exec -T herdr herdr tab create --workspace "$workspace" --cwd /srv/devctl/herdr --label "$agent" --no-focus)
   tab_pane=$(printf '%s\n' "$tab" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
   [[ $tab_pane != null ]] || die "Herdr tab creation failed"
-  compose_hub exec -T herdr herdr pane run "$tab_pane" "HERDR_AGENT=$agent dev-enter $project $agent" >/dev/null
+  wait_pane_shell "$tab_pane"
+  run_agent_in_pane "$tab_pane" "$project" "$agent"
+  wait_agent "$tab_pane"
+}
+
+set_project_agent() {
+  local file=$1 agent=$2 temporary=$1.tmp.$$
+  awk -v value="$agent" '
+    BEGIN { found = 0 }
+    /^PROJECT_AGENT=/ { if (!found) print "PROJECT_AGENT=" value; found = 1; next }
+    { print }
+    END { if (!found) print "PROJECT_AGENT=" value }
+  ' "$file" > "$temporary"
+  chmod 0600 "$temporary"
+  mv -- "$temporary" "$file"
+}
+
+project_agent_from_file() {
+  local file=$1 agent
+  agent=$(sed -n 's/^PROJECT_AGENT=//p' "$file")
+  [[ -n $agent ]] || agent=${DEFAULT_AGENT:-none}
+  [[ $agent == codex || $agent == claude || $agent == shell || $agent == none ]] || \
+    die "invalid PROJECT_AGENT in $file"
+  printf '%s\n' "$agent"
+}
+
+# The single-quoted expressions contain jq variables supplied with --arg.
+# shellcheck disable=SC2016
+start_project_agent() {
+  local project=$1 agent=$2 workspaces workspace_count workspace tabs tab_count tab panes pane_count pane process agents
+  workspaces=$(compose_hub exec -T herdr herdr workspace list)
+  workspace_count=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
+    '[.result.workspaces[]? | select(.label == $label)] | length')
+  if [[ $workspace_count == 0 ]]; then
+    herdr_create "$project" "$agent"
+    return
+  fi
+  [[ $workspace_count == 1 ]] || die "multiple Herdr workspaces match project $project"
+  workspace=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
+    '.result.workspaces[] | select(.label == $label) | .workspace_id')
+
+  tabs=$(compose_hub exec -T herdr herdr tab list --workspace "$workspace")
+  tab_count=$(printf '%s\n' "$tabs" | compose_hub exec -T herdr jq -r --arg label "$agent" \
+    '[.result.tabs[]? | select(.label == $label)] | length')
+  [[ $tab_count -le 1 ]] || die "multiple $agent tabs exist for project $project"
+  if [[ $tab_count == 0 ]]; then
+    tab=$(compose_hub exec -T herdr herdr tab create --workspace "$workspace" \
+      --cwd /srv/devctl/herdr --label "$agent" --no-focus)
+    pane=$(printf '%s\n' "$tab" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
+    [[ $pane != null ]] || die "Herdr tab creation failed"
+  else
+    tab=$(printf '%s\n' "$tabs" | compose_hub exec -T herdr jq -r --arg label "$agent" \
+      '.result.tabs[] | select(.label == $label) | .tab_id')
+    panes=$(compose_hub exec -T herdr herdr pane list --workspace "$workspace")
+    pane_count=$(printf '%s\n' "$panes" | compose_hub exec -T herdr jq -r --arg tab "$tab" \
+      '[.result.panes[]? | select(.tab_id == $tab)] | length')
+    [[ $pane_count == 1 ]] || die "$project $agent tab must contain exactly one pane"
+    pane=$(printf '%s\n' "$panes" | compose_hub exec -T herdr jq -r --arg tab "$tab" \
+      '.result.panes[] | select(.tab_id == $tab) | .pane_id')
+  fi
+
+  agents=$(compose_hub exec -T herdr herdr agent list)
+  if [[ $(printf '%s\n' "$agents" | compose_hub exec -T herdr jq -r --arg pane "$pane" \
+    'any(.result.agents[]?; .pane_id == $pane)') == true ]]; then
+    echo "$project $agent is already running."
+    return
+  fi
+  process=$(compose_hub exec -T herdr herdr pane process-info --pane "$pane" | \
+    compose_hub exec -T herdr jq -r '.result.process_info.foreground_processes[0].name // empty')
+  [[ $process == sh || $process == bash || $process == zsh || $process == fish ]] || \
+    die "$project $agent pane is busy with process: ${process:-unknown}"
+  run_agent_in_pane "$pane" "$project" "$agent"
+  [[ $agent == shell ]] || wait_agent "$pane"
+}
+
+agent_cmd() {
+  (($# == 2)) || die "agent requires a project and codex, claude, or shell"
+  local project=$1 agent=$2 file configured_project container
+  valid_name "$project" || die "invalid project name"
+  [[ $agent == codex || $agent == claude || $agent == shell ]] || \
+    die "agent must be codex, claude, or shell"
+  ensure_bundle
+  load_config
+  prepare_projects_dir
+  file=$PROJECTS/$project.env
+  [[ -f $file ]] || die "project not found: $project"
+  configured_project=$(project_name_from_file "$file")
+  [[ $configured_project == "$project" ]] || die "project configuration mismatch"
+  container=$(workspace_compose "$project" "$file" ps --all --quiet workspace)
+  if [[ -n $container ]]; then
+    workspace_compose "$project" "$file" start workspace
+  else
+    workspace_compose "$project" "$file" up -d workspace
+  fi
+  wait_healthy "devctl-$project" "$file" "$HERE/workspace.compose.yml" workspace
+  start_project_agent "$project" "$agent"
+  set_project_agent "$file" "$agent"
+  echo "Agent ready: $project $agent"
 }
 
 create_cmd() {
@@ -182,19 +346,32 @@ create_cmd() {
   [[ -z $depth ]] || valid_num "$depth" 1 2147483647 || die "invalid clone depth"
   [[ -n $name ]] || name=${repo##*/}; name=${name%.git}; name=$(printf '%s' "$name" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g; s/--*/-/g; s/^-*//; s/-*$//; s/\(.........................................\).*/\1/')
   valid_name "$name" || die "could not derive a valid project name; use --name"
-  [[ -z $port ]] && port=$(next_port)
-  valid_num "$port" 22000 22999 || die "SSH port must be 22000-22999"
   valid_num "$preview" 1 65535 || die "preview port is invalid"
-  file=$PROJECTS/$name.env; [[ ! -e $file ]] || die "project already exists: $name"
+  prepare_projects_dir
+  command -v flock >/dev/null 2>&1 || die "flock is required"
+  exec 9>"$PROJECTS/.lock"
+  flock -x 9
+  file=$PROJECTS/$name.env
+  [[ ! -e $file ]] || die "project already exists: $name"
+  if [[ -z $port ]]; then
+    port=$(next_port)
+  else
+    valid_num "$port" 22000 22999 || die "SSH port must be 22000-22999"
+    port_free "$port" || die "SSH port $port is already allocated or in use"
+  fi
   project_dir=$STATE/projects/$name
   root install -d -m 0755 "$project_dir"
   root install -d -m 0700 "$project_dir/repo" "$project_dir/ssh-host-keys" "$project_dir/vscode-server"
   printf '%s\n' "PROJECT_NAME=$name" "PROJECT_DIR=$project_dir" "REPO_URL=$repo" "REPO_BRANCH=$branch" "REPO_DEPTH=$depth" \
     "SSH_PORT=$port" "PREVIEW_PORT=$preview" "BASE_DOMAIN=$BASE_DOMAIN" "TRAEFIK_NETWORK=$TRAEFIK_NETWORK" \
     "TRAEFIK_ENTRYPOINT=$TRAEFIK_ENTRYPOINT" "TRAEFIK_AUTH_MIDDLEWARE=$TRAEFIK_AUTH_MIDDLEWARE" \
-    "TRAEFIK_CERT_RESOLVER=$TRAEFIK_CERT_RESOLVER" "WORKSPACE_IMAGE=ghcr.io/lucurlings/devctl-workspace:latest" \
-    'WORKSPACE_CPUS=4' 'WORKSPACE_MEMORY=8G' > "$file"
-  chmod 0600 "$file"
+    "TRAEFIK_CERT_RESOLVER=$TRAEFIK_CERT_RESOLVER" "PROJECT_AGENT=$DEFAULT_AGENT" \
+    "WORKSPACE_IMAGE=ghcr.io/lucurlings/devctl-workspace:latest" \
+    'WORKSPACE_CPUS=4' 'WORKSPACE_MEMORY=8G' > "$file.tmp.$$"
+  chmod 0600 "$file.tmp.$$"
+  mv -- "$file.tmp.$$" "$file"
+  flock -u 9
+  exec 9>&-
   docker compose --project-name "devctl-$name" --env-file "$file" -f "$HERE/workspace.compose.yml" up -d
   wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
   herdr_create "$name"
@@ -211,6 +388,84 @@ Host dev-$name
     ProxyJump <server-alias>
     IdentityFile ~/.ssh/id_ed25519
 EOF
+}
+
+update_cmd() {
+  (($# <= 1)) || die "update accepts at most one project"
+  ensure_bundle true
+  [[ -f $HERE/hub.env ]] || die "run './setup.sh install' first"
+  load_config
+  prepare_projects_dir
+
+  local -a hub_profile=() files=()
+  local file name agent restart_telegram=false
+  if [[ -n $(compose_hub --profile telegram ps --all --quiet telegram 2>/dev/null) ]]; then
+    hub_profile=(--profile telegram)
+    compose_hub --profile telegram stop telegram
+    restart_telegram=true
+    trap 'if [[ ${restart_telegram:-false} == true ]]; then compose_hub --profile telegram up -d telegram >/dev/null 2>&1 || true; fi' EXIT
+  fi
+
+  if (($# == 1)); then
+    valid_name "$1" || die "invalid project name"
+    [[ -f $PROJECTS/$1.env ]] || die "project not found: $1"
+    files=("$PROJECTS/$1.env")
+  else
+    shopt -s nullglob
+    files=("$PROJECTS"/*.env)
+    shopt -u nullglob
+    compose_hub "${hub_profile[@]}" up -d --pull always --force-recreate --remove-orphans herdr
+  fi
+  compose_hub up -d herdr
+  wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" herdr
+
+  for file in "${files[@]}"; do
+    name=$(project_name_from_file "$file")
+    workspace_compose "$name" "$file" up -d --pull always --force-recreate --remove-orphans
+    wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
+    agent=$(project_agent_from_file "$file")
+    [[ $agent == none ]] || start_project_agent "$name" "$agent"
+  done
+  if [[ $restart_telegram == true ]]; then
+    compose_hub --profile telegram up -d --pull always --force-recreate telegram
+    wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" telegram
+    restart_telegram=false
+  fi
+  trap - EXIT
+  if (($# == 1)); then
+    echo "Updated $1. Persistent data was preserved."
+  else
+    echo "Updated hub and ${#files[@]} workspace(s). Persistent data was preserved."
+  fi
+}
+
+teardown_cmd() {
+  (($# == 1)) || die "teardown requires a project name or --all"
+  [[ -f $HERE/workspace.compose.yml ]] || die "workspace.compose.yml is missing"
+  prepare_projects_dir
+
+  local file name
+  if [[ $1 == --all ]]; then
+    local -a files=()
+    shopt -s nullglob
+    files=("$PROJECTS"/*.env)
+    shopt -u nullglob
+    for file in "${files[@]}"; do
+      name=$(project_name_from_file "$file")
+      workspace_compose "$name" "$file" down --remove-orphans
+    done
+    [[ -f $HERE/hub.env && -f $HERE/hub.compose.yml ]] && \
+      compose_hub --profile telegram down --remove-orphans
+    echo "Tore down hub and ${#files[@]} workspace(s). Persistent data and config were preserved."
+    return
+  fi
+
+  valid_name "$1" || die "invalid project name"
+  file=$PROJECTS/$1.env
+  [[ -f $file ]] || die "project not found: $1"
+  name=$(project_name_from_file "$file")
+  workspace_compose "$name" "$file" down --remove-orphans
+  echo "Tore down $name. Its repository, credentials, SSH keys, and config were preserved."
 }
 
 login_cmd() {
@@ -230,6 +485,7 @@ telegram_cmd() {
   while (($#)); do case $1 in --token-file) token=${2:-}; shift 2;; --allowed-users) users=${2:-}; shift 2;; --group-id) group=${2:-}; shift 2;; *) die "unknown telegram option: $1";; esac; done
   [[ $users =~ ^[0-9]+(,[0-9]+)*$ && $group =~ ^-100[0-9]+$ && -f $token ]] || die "invalid Telegram settings"
   [[ $(stat -c '%a' "$token") == 600 ]] || die "token file must have mode 0600"
+  [[ -f $HERE/hub.env ]] || die "run './setup.sh install' first"
   sed -i.bak -e "s/^TELEGRAM_ALLOWED_USERS=.*/TELEGRAM_ALLOWED_USERS=$users/" -e "s/^TELEGRAM_GROUP_ID=.*/TELEGRAM_GROUP_ID=$group/" "$HERE/hub.env"; rm -f "$HERE/hub.env.bak"
   root install -m 0600 "$token" "$STATE/secrets/telegram-bot-token"
   compose_hub --profile telegram up -d
@@ -239,6 +495,9 @@ main() {
   case ${1:-} in
     install) shift; install_cmd "$@";;
     create) (($# >= 2)) || die "create requires a repository URL"; shift; create_cmd "$@";;
+    agent) shift; agent_cmd "$@";;
+    update) shift; update_cmd "$@";;
+    teardown) shift; teardown_cmd "$@";;
     list) list_cmd;;
     telegram) shift; telegram_cmd "$@";;
     login) shift; login_cmd "$@";;

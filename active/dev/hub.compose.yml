@@ -3,6 +3,7 @@ name: devctl-hub
 services:
   herdr:
     image: ${HUB_IMAGE:-ghcr.io/lucurlings/devctl-hub:latest}
+    pull_policy: always
     command: ["herdr"]
     restart: unless-stopped
     environment:
@@ -32,6 +33,7 @@ services:
   telegram:
     profiles: ["telegram"]
     image: ${HUB_IMAGE:-ghcr.io/lucurlings/devctl-hub:latest}
+    pull_policy: always
     command: ["ccgram"]
     restart: unless-stopped
     depends_on:
@@ -43,6 +45,8 @@ services:
       CCGRAM_MULTIPLEXER: herdr
       ALLOWED_USERS: ${TELEGRAM_ALLOWED_USERS:-}
       CCGRAM_GROUP_ID: ${TELEGRAM_GROUP_ID:-}
+      AUTOCLOSE_DONE_MINUTES: ${TELEGRAM_AUTOCLOSE_DONE_MINUTES:-0}
+      AUTOCLOSE_DEAD_MINUTES: ${TELEGRAM_AUTOCLOSE_DEAD_MINUTES:-0}
       TELEGRAM_BOT_TOKEN_FILE: /srv/devctl/secrets/telegram-bot-token
       HERDR_SOCKET_PATH: /srv/devctl/herdr/run/herdr.sock
       CODEX_HOME: /srv/devctl/shared/codex
