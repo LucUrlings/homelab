@@ -6,6 +6,7 @@ services:
     environment:
       HOME: /home/developer
       PROJECT_NAME: ${PROJECT_NAME:?set PROJECT_NAME}
+      PROJECT_AGENT: ${PROJECT_AGENT:-none}
       REPO_URL: ${REPO_URL:?set REPO_URL}
       REPO_BRANCH: ${REPO_BRANCH:-}
       REPO_DEPTH: ${REPO_DEPTH:-}

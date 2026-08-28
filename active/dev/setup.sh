@@ -19,17 +19,43 @@ root() {
 compose_hub() { docker compose --env-file "$HERE/hub.env" -f "$HERE/hub.compose.yml" "$@"; }
 
 ensure_bundle() {
-  local refresh=${1:-false} file temporary
+  local refresh=${1:-false} file staged cache_bust stage_dir
+  local -a downloaded=()
+  cache_bust=$(date +%s)
+  stage_dir=$(mktemp -d "$HERE/.bundle.XXXXXX")
   for file in hub.compose.yml hub.env.example workspace.compose.yml workspace.env.example; do
     if [[ $refresh == true || ! -f $HERE/$file ]]; then
-      temporary=$HERE/.$file.$$
-      curl -fsSL "$RAW/$file" -o "$temporary" || {
-        rm -f -- "$temporary"
+      staged=$stage_dir/$file
+      if ! curl -fsSL "$RAW/$file?devctl_cache=$cache_bust" -o "$staged" || [[ ! -s $staged ]]; then
+        rm -f -- "$staged"
+        for staged in "${downloaded[@]}"; do rm -f -- "$stage_dir/$staged"; done
+        rmdir -- "$stage_dir"
         die "could not download $file"
-      }
-      mv -- "$temporary" "$HERE/$file"
+      fi
+      downloaded+=("$file")
     fi
   done
+  for file in "${downloaded[@]}"; do mv -- "$stage_dir/$file" "$HERE/$file"; done
+  rmdir -- "$stage_dir"
+}
+
+refresh_self() {
+  [[ ${DEVCTL_SETUP_REFRESHED:-false} == true ]] && return
+  local temporary=$HERE/.setup.sh.$$ cache_bust
+  cache_bust=$(date +%s)
+  if ! curl -fsSL "$RAW/setup.sh?devctl_cache=$cache_bust" -o "$temporary" || \
+    [[ ! -s $temporary ]] || ! bash -n "$temporary"; then
+    rm -f -- "$temporary"
+    die "could not update setup.sh"
+  fi
+  chmod 0755 "$temporary"
+  if cmp -s -- "$temporary" "$HERE/setup.sh"; then
+    rm -f -- "$temporary"
+    return
+  fi
+  mv -- "$temporary" "$HERE/setup.sh"
+  echo "Updated setup.sh; continuing."
+  DEVCTL_SETUP_REFRESHED=true exec "$HERE/setup.sh" "$@"
 }
 
 prepare_projects_dir() {
@@ -147,15 +173,27 @@ install_cmd() {
 }
 
 port_free() {
-  local port=$1 file configured
+  local port=$1 file configured port_hex
+  local -a tcp_tables=(/proc/net/tcp)
   for file in "$PROJECTS"/*.env; do
     [[ -e $file ]] || continue
     configured=$(sed -n 's/^SSH_PORT=//p' "$file")
     [[ $configured == "$port" ]] && return 1
   done
+  if [[ -n $(docker ps --filter "publish=$port" --format '{{.ID}}' 2>/dev/null) ]]; then
+    return 1
+  fi
   if command -v ss >/dev/null 2>&1; then
     ss -H -ltn | awk -v p="$port" '{ x=$4; sub(/^.*:/,"",x); if (x==p) found=1 } END { exit found }'
+    return
   fi
+  # Minimal Linux hosts may not include iproute2/ss. Check kernel TCP listener
+  # tables directly instead of assuming that every unregistered port is free.
+  [[ -r /proc/net/tcp ]] || return 1
+  [[ ! -r /proc/net/tcp6 ]] || tcp_tables+=(/proc/net/tcp6)
+  port_hex=$(printf '%04X' "$port")
+  awk -v p="$port_hex" '$4 == "0A" && $2 ~ (":" p "$") { found=1 } END { exit found }' \
+    "${tcp_tables[@]}" 2>/dev/null
 }
 
 next_port() {
@@ -206,10 +244,18 @@ wait_agent() {
 }
 
 run_agent_in_pane() {
-  local pane=$1 project=$2 agent=$3
-  compose_hub exec -T herdr herdr pane run "$pane" \
-    "HERDR_AGENT=$agent dev-enter $project $agent; status=\$?; echo '[devctl] $agent exited with status' \"\$status\"" \
-    >/dev/null
+  local pane=$1 project=$2 agent=$3 mode=${4:-new}
+  if [[ $agent == shell ]]; then
+    compose_hub exec -T herdr herdr pane run "$pane" \
+      "exec dev-enter $project shell" >/dev/null
+  else
+    compose_hub exec -T herdr herdr pane run "$pane" \
+      "exec dev-session $project $agent $mode" >/dev/null
+  fi
+}
+
+reconcile_now() {
+  compose_hub exec -T herdr hub-reconcile >/dev/null
 }
 
 herdr_create() {
@@ -232,12 +278,16 @@ herdr_create() {
 }
 
 set_project_agent() {
-  local file=$1 agent=$2 temporary=$1.tmp.$$
-  awk -v value="$agent" '
+  set_env_value "$1" PROJECT_AGENT "$2"
+}
+
+set_env_value() {
+  local file=$1 key=$2 value=$3 temporary=$1.tmp.$$
+  awk -v key="$key" -v value="$value" '
     BEGIN { found = 0 }
-    /^PROJECT_AGENT=/ { if (!found) print "PROJECT_AGENT=" value; found = 1; next }
+    index($0, key "=") == 1 { if (!found) print key "=" value; found = 1; next }
     { print }
-    END { if (!found) print "PROJECT_AGENT=" value }
+    END { if (!found) print key "=" value }
   ' "$file" > "$temporary"
   chmod 0600 "$temporary"
   mv -- "$temporary" "$file"
@@ -255,7 +305,7 @@ project_agent_from_file() {
 # The single-quoted expressions contain jq variables supplied with --arg.
 # shellcheck disable=SC2016
 start_project_agent() {
-  local project=$1 agent=$2 workspaces workspace_count workspace tabs tab_count tab panes pane_count pane process agents
+  local project=$1 agent=$2 workspaces workspace_count workspace tabs tab_count tab panes pane_count pane process agents managed mode=resume
   workspaces=$(compose_hub exec -T herdr herdr workspace list)
   workspace_count=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
     '[.result.workspaces[]? | select(.label == $label)] | length')
@@ -264,6 +314,7 @@ start_project_agent() {
     return
   fi
   [[ $workspace_count == 1 ]] || die "multiple Herdr workspaces match project $project"
+  [[ $agent == none ]] && return
   workspace=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
     '.result.workspaces[] | select(.label == $label) | .workspace_id')
 
@@ -272,6 +323,7 @@ start_project_agent() {
     '[.result.tabs[]? | select(.label == $label)] | length')
   [[ $tab_count -le 1 ]] || die "multiple $agent tabs exist for project $project"
   if [[ $tab_count == 0 ]]; then
+    mode=new
     tab=$(compose_hub exec -T herdr herdr tab create --workspace "$workspace" \
       --cwd /srv/devctl/herdr --label "$agent" --no-focus)
     pane=$(printf '%s\n' "$tab" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
@@ -295,9 +347,19 @@ start_project_agent() {
   fi
   process=$(compose_hub exec -T herdr herdr pane process-info --pane "$pane" | \
     compose_hub exec -T herdr jq -r '.result.process_info.foreground_processes[0].name // empty')
-  [[ $process == sh || $process == bash || $process == zsh || $process == fish ]] || \
-    die "$project $agent pane is busy with process: ${process:-unknown}"
-  run_agent_in_pane "$pane" "$project" "$agent"
+  if [[ $agent == shell && $process == docker ]]; then
+    echo "$project shell is already running."
+    return
+  fi
+  managed=$(compose_hub exec -T herdr herdr pane process-info --pane "$pane" | \
+    compose_hub exec -T herdr jq -r --arg project "$project" --arg agent "$agent" \
+      'any(.result.process_info.foreground_processes[]?; ((.argv // []) | join(" ") | contains("/usr/local/bin/dev-session " + $project + " " + $agent)))')
+  if [[ $managed == true ]]; then
+    wait_agent "$pane"
+    return
+  fi
+  wait_pane_shell "$pane"
+  run_agent_in_pane "$pane" "$project" "$agent" "$mode"
   [[ $agent == shell ]] || wait_agent "$pane"
 }
 
@@ -314,6 +376,9 @@ agent_cmd() {
   [[ -f $file ]] || die "project not found: $project"
   configured_project=$(project_name_from_file "$file")
   [[ $configured_project == "$project" ]] || die "project configuration mismatch"
+  # Persist the fallback before creating a replacement container. Otherwise a
+  # project restarted after teardown can briefly reconcile its previous agent.
+  set_project_agent "$file" "$agent"
   container=$(workspace_compose "$project" "$file" ps --all --quiet workspace)
   if [[ -n $container ]]; then
     workspace_compose "$project" "$file" start workspace
@@ -321,8 +386,8 @@ agent_cmd() {
     workspace_compose "$project" "$file" up -d workspace
   fi
   wait_healthy "devctl-$project" "$file" "$HERE/workspace.compose.yml" workspace
+  reconcile_now
   start_project_agent "$project" "$agent"
-  set_project_agent "$file" "$agent"
   echo "Agent ready: $project $agent"
 }
 
@@ -352,7 +417,7 @@ create_cmd() {
   exec 9>"$PROJECTS/.lock"
   flock -x 9
   file=$PROJECTS/$name.env
-  [[ ! -e $file ]] || die "project already exists: $name"
+  [[ ! -e $file ]] || die "project already exists: $name; use './setup.sh update $name' or './setup.sh agent $name <agent>'"
   if [[ -z $port ]]; then
     port=$(next_port)
   else
@@ -374,7 +439,8 @@ create_cmd() {
   exec 9>&-
   docker compose --project-name "devctl-$name" --env-file "$file" -f "$HERE/workspace.compose.yml" up -d
   wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
-  herdr_create "$name"
+  reconcile_now
+  start_project_agent "$name" "$DEFAULT_AGENT"
   cat <<EOF
 Created $name
 Code: https://$name.code.$BASE_DOMAIN
@@ -390,6 +456,23 @@ Host dev-$name
 EOF
 }
 
+# Print the exact Herdr workspace ID for a project, or nothing when the hub or
+# workspace is absent. Refuse ambiguity instead of closing an unintended workspace.
+# The single-quoted expressions contain jq variables supplied with --arg.
+# shellcheck disable=SC2016
+project_workspace_id() {
+  local project=$1 workspaces count
+  [[ -f $HERE/hub.env && -f $HERE/hub.compose.yml ]] || return 0
+  [[ -n $(compose_hub ps --status running --quiet herdr 2>/dev/null) ]] || return 0
+  workspaces=$(compose_hub exec -T herdr herdr workspace list)
+  count=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
+    '[.result.workspaces[]? | select(.label == $label)] | length')
+  [[ $count -le 1 ]] || die "multiple Herdr workspaces match project $project"
+  [[ $count == 1 ]] || return 0
+  printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
+    '.result.workspaces[] | select(.label == $label) | .workspace_id'
+}
+
 update_cmd() {
   (($# <= 1)) || die "update accepts at most one project"
   ensure_bundle true
@@ -397,10 +480,9 @@ update_cmd() {
   load_config
   prepare_projects_dir
 
-  local -a hub_profile=() files=()
-  local file name agent restart_telegram=false
-  if [[ -n $(compose_hub --profile telegram ps --all --quiet telegram 2>/dev/null) ]]; then
-    hub_profile=(--profile telegram)
+  local -a files=()
+  local file name agent hub_container restart_telegram=false update_hub=false
+  if [[ -n $(compose_hub --profile telegram ps --status running --quiet telegram 2>/dev/null) ]]; then
     compose_hub --profile telegram stop telegram
     restart_telegram=true
     trap 'if [[ ${restart_telegram:-false} == true ]]; then compose_hub --profile telegram up -d telegram >/dev/null 2>&1 || true; fi' EXIT
@@ -411,23 +493,36 @@ update_cmd() {
     [[ -f $PROJECTS/$1.env ]] || die "project not found: $1"
     files=("$PROJECTS/$1.env")
   else
+    update_hub=true
     shopt -s nullglob
     files=("$PROJECTS"/*.env)
     shopt -u nullglob
-    compose_hub "${hub_profile[@]}" up -d --pull always --force-recreate --remove-orphans herdr
+    compose_hub up -d --pull always --force-recreate --remove-orphans herdr
   fi
-  compose_hub up -d herdr
+  if [[ $update_hub == false ]]; then
+    hub_container=$(compose_hub ps --all --quiet herdr 2>/dev/null || true)
+    if [[ -n $hub_container ]]; then
+      compose_hub start herdr
+    else
+      compose_hub up -d --pull missing herdr
+    fi
+  fi
   wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" herdr
 
   for file in "${files[@]}"; do
     name=$(project_name_from_file "$file")
     workspace_compose "$name" "$file" up -d --pull always --force-recreate --remove-orphans
     wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
+    reconcile_now
     agent=$(project_agent_from_file "$file")
     [[ $agent == none ]] || start_project_agent "$name" "$agent"
   done
   if [[ $restart_telegram == true ]]; then
-    compose_hub --profile telegram up -d --pull always --force-recreate telegram
+    if [[ $update_hub == true ]]; then
+      compose_hub --profile telegram up -d --pull always --force-recreate telegram
+    else
+      compose_hub --profile telegram start telegram
+    fi
     wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" telegram
     restart_telegram=false
   fi
@@ -444,7 +539,7 @@ teardown_cmd() {
   [[ -f $HERE/workspace.compose.yml ]] || die "workspace.compose.yml is missing"
   prepare_projects_dir
 
-  local file name
+  local file name workspace close_output
   if [[ $1 == --all ]]; then
     local -a files=()
     shopt -s nullglob
@@ -464,7 +559,23 @@ teardown_cmd() {
   file=$PROJECTS/$1.env
   [[ -f $file ]] || die "project not found: $1"
   name=$(project_name_from_file "$file")
+  # Validate that the label resolves unambiguously before changing Docker state.
+  project_workspace_id "$name" >/dev/null
   workspace_compose "$name" "$file" down --remove-orphans
+  # Herdr may automatically remove the workspace when its final docker-exec pane
+  # exits. Resolve it again so an already-completed close remains successful.
+  workspace=$(project_workspace_id "$name")
+  if [[ -n $workspace ]]; then
+    if ! close_output=$(compose_hub exec -T herdr herdr workspace close "$workspace" 2>&1); then
+      # The final docker-exec pane may exit between the lookup and close call,
+      # causing Herdr to finish the same cleanup first. Only that exact race is
+      # idempotent; surface every other failure.
+      if [[ $close_output != *'"code":"workspace_not_found"'* ]]; then
+        printf '%s\n' "$close_output" >&2
+        die "could not close Herdr workspace $workspace"
+      fi
+    fi
+  fi
   echo "Tore down $name. Its repository, credentials, SSH keys, and config were preserved."
 }
 
@@ -486,9 +597,12 @@ telegram_cmd() {
   [[ $users =~ ^[0-9]+(,[0-9]+)*$ && $group =~ ^-100[0-9]+$ && -f $token ]] || die "invalid Telegram settings"
   [[ $(stat -c '%a' "$token") == 600 ]] || die "token file must have mode 0600"
   [[ -f $HERE/hub.env ]] || die "run './setup.sh install' first"
-  sed -i.bak -e "s/^TELEGRAM_ALLOWED_USERS=.*/TELEGRAM_ALLOWED_USERS=$users/" -e "s/^TELEGRAM_GROUP_ID=.*/TELEGRAM_GROUP_ID=$group/" "$HERE/hub.env"; rm -f "$HERE/hub.env.bak"
+  set_env_value "$HERE/hub.env" TELEGRAM_ALLOWED_USERS "$users"
+  set_env_value "$HERE/hub.env" TELEGRAM_GROUP_ID "$group"
   root install -m 0600 "$token" "$STATE/secrets/telegram-bot-token"
   compose_hub --profile telegram up -d
+  wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" telegram
+  echo "Telegram configured and running."
 }
 
 main() {
@@ -496,7 +610,7 @@ main() {
     install) shift; install_cmd "$@";;
     create) (($# >= 2)) || die "create requires a repository URL"; shift; create_cmd "$@";;
     agent) shift; agent_cmd "$@";;
-    update) shift; update_cmd "$@";;
+    update) refresh_self "$@"; shift; update_cmd "$@";;
     teardown) shift; teardown_cmd "$@";;
     list) list_cmd;;
     telegram) shift; telegram_cmd "$@";;
