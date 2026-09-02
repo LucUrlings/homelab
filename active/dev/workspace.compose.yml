@@ -6,7 +6,6 @@ services:
     environment:
       HOME: /home/developer
       PROJECT_NAME: ${PROJECT_NAME:?set PROJECT_NAME}
-      PROJECT_AGENT: ${PROJECT_AGENT:-none}
       REPO_URL: ${REPO_URL:?set REPO_URL}
       REPO_BRANCH: ${REPO_BRANCH:-}
       REPO_DEPTH: ${REPO_DEPTH:-}
@@ -27,6 +26,10 @@ services:
       - ${PROJECT_DIR:?set PROJECT_DIR}/vscode-server:/home/developer/.vscode-server
       - /srv/devctl/shared/codex:/home/developer/.codex
       - /srv/devctl/shared/claude:/home/developer/.claude
+      # Herdr stores absolute hook paths in the shared configs. Expose those
+      # same paths read-only so native session events work inside workspaces.
+      - /srv/devctl/shared/codex:/srv/devctl/shared/codex:ro
+      - /srv/devctl/shared/claude:/srv/devctl/shared/claude:ro
       - /srv/devctl/shared/gh:/home/developer/.config/gh
       - /srv/devctl/ssh/authorized_keys:/etc/ssh/authorized_keys:ro
       - /srv/devctl/herdr/run:/run/herdr:ro

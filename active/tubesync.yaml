@@ -8,12 +8,14 @@ services:
     ports:
       - 5432:5432
     volumes:
-      - $DOCKERDIR/appdata/tubesync/db:/var/lib/postgresql/data
+      - $DOCKERDIR/appdata/tubesync-db:/var/lib/postgresql/data
     environment:
       - POSTGRES_DB=tubesync
       - POSTGRES_USER=tubesync
       - POSTGRES_PASSWORD=tubesync
   tubesync:
+    cpus: 1.0
+    mem_limit: 1g
     image: ghcr.io/meeb/tubesync:latest
     container_name: tubesync
     restart: unless-stopped

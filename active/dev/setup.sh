@@ -58,20 +58,37 @@ refresh_self() {
   DEVCTL_SETUP_REFRESHED=true exec "$HERE/setup.sh" "$@"
 }
 
+require_installed() {
+  [[ -f $CONFIG && -f $HERE/hub.env ]] || die "run './setup.sh install' first"
+}
+
 prepare_projects_dir() {
   [[ ! -e $PROJECTS || -d $PROJECTS ]] || die "$PROJECTS is not a directory"
   [[ ! -d $PROJECTS || -w $PROJECTS ]] || root chown "$(id -u):$(id -g)" "$PROJECTS"
   install -d -m 0700 "$PROJECTS"
 }
 
+prepare_shared_dirs() {
+  local -a dirs=(
+    "$STATE/shared/codex"
+    "$STATE/shared/claude"
+    "$STATE/shared/gh"
+    "$STATE/ccgram"
+  )
+  root install -d -m 0700 "${dirs[@]}"
+  # All user-facing tools run as the image's fixed developer UID/GID.
+  root chown -R 1000:1000 "${dirs[@]}"
+}
+
 usage() {
   cat <<'EOF'
 Usage:
-  ./setup.sh install --agent codex|claude|none [global options]
+  ./setup.sh install [global options]
   ./setup.sh create <repo> [--name NAME] [--branch BRANCH] [--depth N]
                           [--preview-port PORT] [--ssh-port PORT]
   ./setup.sh agent PROJECT codex|claude|shell
   ./setup.sh update [PROJECT]
+  ./setup.sh reset-sessions
   ./setup.sh teardown PROJECT|--all
   ./setup.sh list
   ./setup.sh telegram --token-file PATH --allowed-users IDS --group-id ID
@@ -128,10 +145,9 @@ install_key() {
 }
 
 install_cmd() {
-  local agent='' domain='' network='' middleware='' entrypoint=websecure resolver='' key='' no_start=false
+  local domain='' network='' middleware='' entrypoint=websecure resolver='' key='' no_start=false
   while (($#)); do
     case $1 in
-      --agent) agent=${2:-}; shift 2;;
       --base-domain) domain=${2:-}; shift 2;;
       --traefik-network) network=${2:-}; shift 2;;
       --auth-middleware) middleware=${2:-}; shift 2;;
@@ -142,7 +158,6 @@ install_cmd() {
       *) die "unknown install option: $1";;
     esac
   done
-  [[ $agent == codex || $agent == claude || $agent == none ]] || die "--agent must be codex, claude, or none"
   [[ -n $domain ]] || read -r -p 'Base domain: ' domain
   [[ -n $network ]] || read -r -p 'Traefik network: ' network
   [[ -n $middleware ]] || read -r -p 'Traefik OAuth middleware: ' middleware
@@ -153,8 +168,9 @@ install_cmd() {
   prepare_projects_dir
   [[ $entrypoint =~ ^[A-Za-z0-9_.-]+$ ]] || die "invalid Traefik entrypoint"
   [[ -z $resolver || $resolver =~ ^[A-Za-z0-9_.-]+$ ]] || die "invalid certificate resolver"
-  root install -d -m 0755 "$STATE/herdr" "$STATE/herdr/run" "$STATE/ccgram" "$STATE/projects"
-  root install -d -m 0700 "$STATE/secrets" "$STATE/shared/codex" "$STATE/shared/claude" "$STATE/shared/gh"
+  root install -d -m 0755 "$STATE/herdr" "$STATE/herdr/run" "$STATE/projects"
+  root install -d -m 0700 "$STATE/secrets"
+  prepare_shared_dirs
   root install -d -m 0755 "$STATE/ssh"
   root touch "$STATE/ssh/authorized_keys"
   root chmod 0600 "$STATE/ssh/authorized_keys"
@@ -162,12 +178,11 @@ install_cmd() {
   chmod 0600 "$HERE/hub.env"
   if [[ -n $key ]]; then install_key "$key"; elif [[ -f $HOME/.ssh/authorized_keys ]]; then install_key "$HOME/.ssh/authorized_keys"; fi
   printf '%s\n' "BASE_DOMAIN=$domain" "TRAEFIK_NETWORK=$network" "TRAEFIK_ENTRYPOINT=$entrypoint" \
-    "TRAEFIK_AUTH_MIDDLEWARE=$middleware" "TRAEFIK_CERT_RESOLVER=$resolver" "DEFAULT_AGENT=$agent" > "$CONFIG"
+    "TRAEFIK_AUTH_MIDDLEWARE=$middleware" "TRAEFIK_CERT_RESOLVER=$resolver" > "$CONFIG"
   chmod 0600 "$CONFIG"
   if [[ $no_start == false ]]; then
     compose_hub up -d
     wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" herdr
-    [[ $agent == none ]] || login_cmd "$agent"
   fi
   echo "Installed. Run './setup.sh create <repo>' to create a workspace."
 }
@@ -244,41 +259,21 @@ wait_agent() {
 }
 
 run_agent_in_pane() {
-  local pane=$1 project=$2 agent=$3 mode=${4:-new}
-  if [[ $agent == shell ]]; then
-    compose_hub exec -T herdr herdr pane run "$pane" \
-      "exec dev-enter $project shell" >/dev/null
-  else
-    compose_hub exec -T herdr herdr pane run "$pane" \
-      "exec dev-session $project $agent $mode" >/dev/null
-  fi
-}
-
-reconcile_now() {
-  compose_hub exec -T herdr hub-reconcile >/dev/null
+  local pane=$1 project=$2 agent=$3
+  compose_hub exec -T herdr herdr pane run "$pane" \
+    "exec dev-enter $project $agent" >/dev/null
 }
 
 herdr_create() {
-  local project=$1 agent=${2:-${DEFAULT_AGENT:-none}} result workspace pane shell_tab tab tab_pane
+  local project=$1 agent=$2 result pane tab
   result=$(compose_hub exec -T herdr herdr workspace create --cwd /srv/devctl/herdr --label "$project" --no-focus)
-  workspace=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.workspace.workspace_id')
   pane=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
-  shell_tab=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.tab.tab_id')
-  [[ $workspace != null && $pane != null && $shell_tab != null ]] || die "Herdr workspace creation failed"
-  compose_hub exec -T herdr herdr tab rename "$shell_tab" shell >/dev/null
+  tab=$(printf '%s\n' "$result" | compose_hub exec -T herdr jq -r '.result.tab.tab_id')
+  [[ $pane != null && $tab != null ]] || die "Herdr workspace creation failed"
+  compose_hub exec -T herdr herdr tab rename "$tab" "$agent" >/dev/null
   wait_pane_shell "$pane"
-  run_agent_in_pane "$pane" "$project" shell
-  [[ $agent == none || $agent == shell ]] && return
-  tab=$(compose_hub exec -T herdr herdr tab create --workspace "$workspace" --cwd /srv/devctl/herdr --label "$agent" --no-focus)
-  tab_pane=$(printf '%s\n' "$tab" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
-  [[ $tab_pane != null ]] || die "Herdr tab creation failed"
-  wait_pane_shell "$tab_pane"
-  run_agent_in_pane "$tab_pane" "$project" "$agent"
-  wait_agent "$tab_pane"
-}
-
-set_project_agent() {
-  set_env_value "$1" PROJECT_AGENT "$2"
+  run_agent_in_pane "$pane" "$project" "$agent"
+  [[ $agent == shell ]] || wait_agent "$pane"
 }
 
 set_env_value() {
@@ -293,19 +288,10 @@ set_env_value() {
   mv -- "$temporary" "$file"
 }
 
-project_agent_from_file() {
-  local file=$1 agent
-  agent=$(sed -n 's/^PROJECT_AGENT=//p' "$file")
-  [[ -n $agent ]] || agent=${DEFAULT_AGENT:-none}
-  [[ $agent == codex || $agent == claude || $agent == shell || $agent == none ]] || \
-    die "invalid PROJECT_AGENT in $file"
-  printf '%s\n' "$agent"
-}
-
 # The single-quoted expressions contain jq variables supplied with --arg.
 # shellcheck disable=SC2016
 start_project_agent() {
-  local project=$1 agent=$2 workspaces workspace_count workspace tabs tab_count tab panes pane_count pane process agents managed mode=resume
+  local project=$1 agent=$2 workspaces workspace_count workspace tabs tab_count tab panes pane_count pane process agents
   workspaces=$(compose_hub exec -T herdr herdr workspace list)
   workspace_count=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
     '[.result.workspaces[]? | select(.label == $label)] | length')
@@ -314,7 +300,6 @@ start_project_agent() {
     return
   fi
   [[ $workspace_count == 1 ]] || die "multiple Herdr workspaces match project $project"
-  [[ $agent == none ]] && return
   workspace=$(printf '%s\n' "$workspaces" | compose_hub exec -T herdr jq -r --arg label "$project" \
     '.result.workspaces[] | select(.label == $label) | .workspace_id')
 
@@ -323,7 +308,6 @@ start_project_agent() {
     '[.result.tabs[]? | select(.label == $label)] | length')
   [[ $tab_count -le 1 ]] || die "multiple $agent tabs exist for project $project"
   if [[ $tab_count == 0 ]]; then
-    mode=new
     tab=$(compose_hub exec -T herdr herdr tab create --workspace "$workspace" \
       --cwd /srv/devctl/herdr --label "$agent" --no-focus)
     pane=$(printf '%s\n' "$tab" | compose_hub exec -T herdr jq -r '.result.root_pane.pane_id')
@@ -351,15 +335,8 @@ start_project_agent() {
     echo "$project shell is already running."
     return
   fi
-  managed=$(compose_hub exec -T herdr herdr pane process-info --pane "$pane" | \
-    compose_hub exec -T herdr jq -r --arg project "$project" --arg agent "$agent" \
-      'any(.result.process_info.foreground_processes[]?; ((.argv // []) | join(" ") | contains("/usr/local/bin/dev-session " + $project + " " + $agent)))')
-  if [[ $managed == true ]]; then
-    wait_agent "$pane"
-    return
-  fi
   wait_pane_shell "$pane"
-  run_agent_in_pane "$pane" "$project" "$agent" "$mode"
+  run_agent_in_pane "$pane" "$project" "$agent"
   [[ $agent == shell ]] || wait_agent "$pane"
 }
 
@@ -376,9 +353,6 @@ agent_cmd() {
   [[ -f $file ]] || die "project not found: $project"
   configured_project=$(project_name_from_file "$file")
   [[ $configured_project == "$project" ]] || die "project configuration mismatch"
-  # Persist the fallback before creating a replacement container. Otherwise a
-  # project restarted after teardown can briefly reconcile its previous agent.
-  set_project_agent "$file" "$agent"
   container=$(workspace_compose "$project" "$file" ps --all --quiet workspace)
   if [[ -n $container ]]; then
     workspace_compose "$project" "$file" start workspace
@@ -386,7 +360,6 @@ agent_cmd() {
     workspace_compose "$project" "$file" up -d workspace
   fi
   wait_healthy "devctl-$project" "$file" "$HERE/workspace.compose.yml" workspace
-  reconcile_now
   start_project_agent "$project" "$agent"
   echo "Agent ready: $project $agent"
 }
@@ -430,7 +403,7 @@ create_cmd() {
   printf '%s\n' "PROJECT_NAME=$name" "PROJECT_DIR=$project_dir" "REPO_URL=$repo" "REPO_BRANCH=$branch" "REPO_DEPTH=$depth" \
     "SSH_PORT=$port" "PREVIEW_PORT=$preview" "BASE_DOMAIN=$BASE_DOMAIN" "TRAEFIK_NETWORK=$TRAEFIK_NETWORK" \
     "TRAEFIK_ENTRYPOINT=$TRAEFIK_ENTRYPOINT" "TRAEFIK_AUTH_MIDDLEWARE=$TRAEFIK_AUTH_MIDDLEWARE" \
-    "TRAEFIK_CERT_RESOLVER=$TRAEFIK_CERT_RESOLVER" "PROJECT_AGENT=$DEFAULT_AGENT" \
+    "TRAEFIK_CERT_RESOLVER=$TRAEFIK_CERT_RESOLVER" \
     "WORKSPACE_IMAGE=ghcr.io/lucurlings/devctl-workspace:latest" \
     'WORKSPACE_CPUS=4' 'WORKSPACE_MEMORY=8G' > "$file.tmp.$$"
   chmod 0600 "$file.tmp.$$"
@@ -439,8 +412,6 @@ create_cmd() {
   exec 9>&-
   docker compose --project-name "devctl-$name" --env-file "$file" -f "$HERE/workspace.compose.yml" up -d
   wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
-  reconcile_now
-  start_project_agent "$name" "$DEFAULT_AGENT"
   cat <<EOF
 Created $name
 Code: https://$name.code.$BASE_DOMAIN
@@ -453,6 +424,9 @@ Host dev-$name
     User developer
     ProxyJump <server-alias>
     IdentityFile ~/.ssh/id_ed25519
+
+Start an agent when wanted:
+    ./setup.sh agent $name codex
 EOF
 }
 
@@ -475,15 +449,20 @@ project_workspace_id() {
 
 update_cmd() {
   (($# <= 1)) || die "update accepts at most one project"
+  require_installed
   ensure_bundle true
-  [[ -f $HERE/hub.env ]] || die "run './setup.sh install' first"
   load_config
   prepare_projects_dir
 
   local -a files=()
-  local file name agent hub_container restart_telegram=false update_hub=false
-  if [[ -n $(compose_hub --profile telegram ps --status running --quiet telegram 2>/dev/null) ]]; then
-    compose_hub --profile telegram stop telegram
+  local file name hub_container telegram_container telegram_status='' restart_telegram=false update_hub=false
+  telegram_container=$(compose_hub --profile telegram ps --all --quiet telegram 2>/dev/null || true)
+  if [[ -n $telegram_container ]]; then
+    telegram_status=$(docker inspect --format '{{.State.Status}}' "$telegram_container" 2>/dev/null || true)
+  fi
+  if [[ $telegram_status == running || $telegram_status == created || $telegram_status == restarting ]]; then
+    [[ $telegram_status != running && $telegram_status != restarting ]] || \
+      compose_hub --profile telegram stop telegram
     restart_telegram=true
     trap 'if [[ ${restart_telegram:-false} == true ]]; then compose_hub --profile telegram up -d telegram >/dev/null 2>&1 || true; fi' EXIT
   fi
@@ -513,9 +492,6 @@ update_cmd() {
     name=$(project_name_from_file "$file")
     workspace_compose "$name" "$file" up -d --pull always --force-recreate --remove-orphans
     wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
-    reconcile_now
-    agent=$(project_agent_from_file "$file")
-    [[ $agent == none ]] || start_project_agent "$name" "$agent"
   done
   if [[ $restart_telegram == true ]]; then
     if [[ $update_hub == true ]]; then
@@ -532,6 +508,60 @@ update_cmd() {
   else
     echo "Updated hub and ${#files[@]} workspace(s). Persistent data was preserved."
   fi
+}
+
+reset_sessions_cmd() {
+  (($# == 0)) || die "reset-sessions accepts no arguments"
+  require_installed
+  ensure_bundle
+  load_config
+  prepare_projects_dir
+
+  local -a files=()
+  local answer timestamp backup telegram_container telegram_status='' restart_telegram=false file name
+  timestamp=$(date -u +%Y%m%dT%H%M%SZ)
+  backup=$STATE/backups/sessions-$timestamp
+  echo "This archives Herdr and CCGram session state to: $backup"
+  echo "Repositories, credentials, SSH keys, and project configuration are preserved."
+  read -r -p "Type RESET to continue: " answer
+  [[ $answer == RESET ]] || die "session reset cancelled"
+
+  telegram_container=$(compose_hub --profile telegram ps --all --quiet telegram 2>/dev/null || true)
+  if [[ -n $telegram_container ]]; then
+    telegram_status=$(docker inspect --format '{{.State.Status}}' "$telegram_container" 2>/dev/null || true)
+  fi
+  if [[ $telegram_status == running || $telegram_status == created || $telegram_status == restarting ]]; then
+    restart_telegram=true
+    trap 'if [[ ${restart_telegram:-false} == true ]]; then compose_hub --profile telegram up -d telegram >/dev/null 2>&1 || true; fi' EXIT
+    compose_hub --profile telegram stop telegram
+  fi
+  compose_hub stop herdr
+
+  root install -d -m 0700 "$backup"
+  [[ ! -e $backup/herdr && ! -e $backup/ccgram ]] || die "backup path already exists"
+  [[ ! -d $STATE/herdr ]] || root mv -- "$STATE/herdr" "$backup/herdr"
+  [[ ! -d $STATE/ccgram ]] || root mv -- "$STATE/ccgram" "$backup/ccgram"
+  root install -d -m 0755 "$STATE/herdr" "$STATE/herdr/run"
+  prepare_shared_dirs
+
+  compose_hub up -d --force-recreate herdr
+  wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" herdr
+  shopt -s nullglob
+  files=("$PROJECTS"/*.env)
+  shopt -u nullglob
+  for file in "${files[@]}"; do
+    name=$(project_name_from_file "$file")
+    workspace_compose "$name" "$file" up -d --force-recreate --remove-orphans
+    wait_healthy "devctl-$name" "$file" "$HERE/workspace.compose.yml" workspace
+  done
+  if [[ $restart_telegram == true ]]; then
+    compose_hub --profile telegram up -d --force-recreate telegram
+    wait_healthy devctl-hub "$HERE/hub.env" "$HERE/hub.compose.yml" telegram
+    restart_telegram=false
+  fi
+  trap - EXIT
+  echo "Session state reset. Start a clean agent with './setup.sh agent <project> codex'."
+  echo "Backup: $backup"
 }
 
 teardown_cmd() {
@@ -608,13 +638,14 @@ telegram_cmd() {
 main() {
   case ${1:-} in
     install) shift; install_cmd "$@";;
-    create) (($# >= 2)) || die "create requires a repository URL"; shift; create_cmd "$@";;
-    agent) shift; agent_cmd "$@";;
-    update) refresh_self "$@"; shift; update_cmd "$@";;
-    teardown) shift; teardown_cmd "$@";;
-    list) list_cmd;;
-    telegram) shift; telegram_cmd "$@";;
-    login) shift; login_cmd "$@";;
+    create) require_installed; (($# >= 2)) || die "create requires a repository URL"; shift; create_cmd "$@";;
+    agent) require_installed; shift; agent_cmd "$@";;
+    update) require_installed; refresh_self "$@"; shift; update_cmd "$@";;
+    reset-sessions) require_installed; refresh_self "$@"; shift; reset_sessions_cmd "$@";;
+    teardown) require_installed; shift; teardown_cmd "$@";;
+    list) require_installed; list_cmd;;
+    telegram) require_installed; shift; telegram_cmd "$@";;
+    login) require_installed; shift; login_cmd "$@";;
     -h|--help|help) usage;;
     *) usage; exit 2;;
   esac
