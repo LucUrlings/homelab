@@ -1,0 +1,117 @@
+name: hermes
+
+services:
+  hermes:
+    container_name: hermes
+    image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
+    restart: unless-stopped
+    shm_size: 1gb
+    command: ["gateway", "run"]
+    environment:
+      HERMES_UID: ${PUID:?Set PUID in .env}
+      HERMES_GID: ${PGID:?Set PGID in .env}
+      DEVCTL_CODE_URL: https://${CODE_HOST:?Set CODE_HOST in .env}
+      DEVCTL_DEV_URL: https://${DEV_HOST:?Set DEV_HOST in .env}
+      DEVCTL_DASHBOARD_URL: https://${DASHBOARD_HOST:?Set DASHBOARD_HOST in .env}
+      DEVCTL_DEV_PORT: ${DEV_PORT:-3000}
+      PROJECTS_PATH: /opt/data/projects
+      HERMES_DASHBOARD: "1"
+      HERMES_DASHBOARD_HOST: 0.0.0.0
+      HERMES_DASHBOARD_PORT: "9119"
+      HERMES_DASHBOARD_PUBLIC_URL: https://hermes.$DOMAINNAME
+      HERMES_DASHBOARD_BASIC_AUTH_USERNAME: ${HERMES_DASHBOARD_BASIC_AUTH_USERNAME:-admin}
+      HERMES_DASHBOARD_BASIC_AUTH_PASSWORD: ${HERMES_DASHBOARD_BASIC_AUTH_PASSWORD:?Set HERMES_DASHBOARD_BASIC_AUTH_PASSWORD in .env}
+      HERMES_DASHBOARD_BASIC_AUTH_SECRET: ${HERMES_DASHBOARD_BASIC_AUTH_SECRET:?Set HERMES_DASHBOARD_BASIC_AUTH_SECRET in .env}
+    volumes:
+      - ${DATA_PATH:?Set absolute DATA_PATH in .env}:/opt/data
+    expose:
+      - "9119"
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.hermes-dashboard.entrypoints=websecure"
+      - "traefik.http.routers.hermes-dashboard.rule=Host(`hermes.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.hermes-dashboard.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.hermes-dashboard.service=hermes-dashboard-svc"
+      - "traefik.http.services.hermes-dashboard-svc.loadbalancer.server.port=9119"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:9119/api/status"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+    networks:
+      - hermes_internal
+      - t3_proxy
+
+  companion:
+    container_name: hermes-companion
+    image: ${COMPANION_IMAGE:-ghcr.io/lucurlings/devctl-companion:latest}
+    restart: unless-stopped
+    environment:
+      PUID: ${PUID:?Set PUID in .env}
+      PGID: ${PGID:?Set PGID in .env}
+      DEVCTL_CODE_URL: code-hermes.$DOMAINNAME
+      DEVCTL_DEV_URL: dev-hermes.$DOMAINNAME
+      DEVCTL_DASHBOARD_URL: https://hermes.$DOMAINNAME
+      DEVCTL_DEV_PORT: ${DEV_PORT:-3000}
+      PROJECTS_PATH: ${DATA_PATH}/projects
+    working_dir: ${DATA_PATH}/projects
+    command:
+      - code-server
+      - --bind-addr
+      - 0.0.0.0:8080
+      - --auth
+      - none
+      - --disable-telemetry
+      - ${DATA_PATH}/projects
+    volumes:
+      # The identical host/container path lets nested Docker bind mounts work.
+      - ${DATA_PATH}:${DATA_PATH}
+      - ./companion-data/code-server:/home/coder/.local/share/code-server
+      - ./companion-data/config:/home/coder/.config/code-server
+      - /var/run/docker.sock:/var/run/docker.sock
+    expose:
+      - "8080"
+      - "${DEV_PORT:-3000}"
+    labels:
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.hermes-code.entrypoints=websecure"
+      - "traefik.http.routers.hermes-code.rule=Host(`code-hermes.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.hermes-code.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.hermes-code.service=hermes-code-svc"
+      - "traefik.http.services.hermes-code-svc.loadbalancer.server.port=8080"
+      - "traefik.enable=true"
+      # HTTP Routers
+      - "traefik.http.routers.hermes-dev.entrypoints=websecure"
+      - "traefik.http.routers.hermes-dev.rule=Host(`dev-hermes.$DOMAINNAME`)"
+      # Middlewares
+      - "traefik.http.routers.hermes-dev.middlewares=chain-oauth@file"
+      # Http Services
+      - "traefik.http.routers.hermes-dev.service=hermes-dev-svc"
+      - "traefik.http.services.hermes-dev-svc.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    networks:
+      - hermes_internal
+      - t3_proxy
+    logging:
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  hermes_internal:

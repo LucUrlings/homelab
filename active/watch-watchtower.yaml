@@ -21,7 +21,7 @@ x-error-reporting-environment: &error-reporting-environment
 
 x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__PollIntervalMilliseconds: ${WATCHTOWER_WORKER_POLICY_POLL_INTERVAL_MILLISECONDS:-2000}
-  WorkerPolicies__Chrono24FetchDefaultConcurrency: ${WATCHTOWER_CHRONO24_FETCH_DEFAULT_CONCURRENCY:-3}
+  WorkerPolicies__Chrono24FetchDefaultConcurrency: ${WATCHTOWER_CHRONO24_FETCH_DEFAULT_CONCURRENCY:-2}
   WorkerPolicies__Chrono24FetchHardMaximum: ${WATCHTOWER_CHRONO24_FETCH_HARD_MAXIMUM:-10}
   WorkerPolicies__Chrono24DiscoveryDefaultConcurrency: ${WATCHTOWER_WORKER_CHRONO24_DISCOVERY_DEFAULT_CONCURRENCY:-1}
   WorkerPolicies__Chrono24DiscoveryHardMaximum: ${WATCHTOWER_WORKER_CHRONO24_DISCOVERY_HARD_MAXIMUM:-3}
@@ -224,7 +224,6 @@ services:
           *worker-policy-environment,
         ]
       Chrono24__FlareSolverrEndpoint: http://watchtower-flaresolverr:8191/v1
-      Chrono24__RequestDelayMilliseconds: ${WATCHTOWER_CHRONO24_REQUEST_DELAY_MILLISECONDS:-0}
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     networks:
       - watchtower-application

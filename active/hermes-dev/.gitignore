@@ -1,0 +1,21 @@
+# Hermes persistent runtime state. This contains API credentials, OAuth tokens,
+# conversations, memories, databases, downloaded tools, caches, and logs.
+/data/
+
+# Companion/code-server runtime state. This may contain login state, workspace
+# history, extension data, machine identifiers, caches, and logs.
+/companion-data/
+
+# Local Compose overrides and environment/secrets files.
+.env
+.env.*
+!.env.example
+compose.override.yml
+compose.override.yaml
+
+# Private key and credential containers.
+*.key
+*.pem
+*.p12
+*.pfx
+*.jks

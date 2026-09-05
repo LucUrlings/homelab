@@ -1,6 +1,7 @@
 services:
   lucurlings-website:
     image: ghcr.io/lucurlings/lucurlings.nl:latest
+    pull_policy: always
     container_name: lucurlings.nl
     restart: unless-stopped
     networks:
