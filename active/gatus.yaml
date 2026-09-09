@@ -5,7 +5,6 @@ services:
     restart: unless-stopped
     networks:
       - t3_proxy
-      - socket_proxy
     volumes:
       - $DOCKERDIR/appdata/gatus:/config
     labels:

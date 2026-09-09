@@ -2,21 +2,20 @@
 services:
   watchtower:
     container_name: watchtower
-    image: containrrr/watchtower
+    image: nickfedor/watchtower:latest
 #    profiles:
 #      - all
 #      - core
     restart: always
     networks:
       - t3_proxy
-      - socket_proxy
     environment:
       TZ: ${TZ} # defined in .env
       WATCHTOWER_CLEANUP: "true"
       WATCHTOWER_INCLUDE_RESTARTING: "true"
       WATCHTOWER_INCLUDE_STOPPED: "true"
       WATCHTOWER_REVIVE_STOPPED: "true"
-      WATCHTOWER_SCHEDULE: "0 4 * * *" # run daily at 04:00
+      WATCHTOWER_SCHEDULE: "0 0 4 * * *" # daily at 04:00
       WATCHTOWER_NOTIFICATION_URL: /run/secrets/shoutrrr_telegram_secret
     secrets:
       - shoutrrr_telegram_secret

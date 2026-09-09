@@ -32,7 +32,7 @@ services:
       - "traefik.http.routers.hermes-dashboard.entrypoints=websecure"
       - "traefik.http.routers.hermes-dashboard.rule=Host(`hermes.$DOMAINNAME`)"
       # Middlewares
-      - "traefik.http.routers.hermes-dashboard.middlewares=chain-oauth@file"
+      # - "traefik.http.routers.hermes-dashboard.middlewares=chain-oauth@file"
       # Http Services
       - "traefik.http.routers.hermes-dashboard.service=hermes-dashboard-svc"
       - "traefik.http.services.hermes-dashboard-svc.loadbalancer.server.port=9119"

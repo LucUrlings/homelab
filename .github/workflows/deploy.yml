@@ -5,6 +5,70 @@ on:
     branches:
       - main
   workflow_dispatch:
+    inputs:
+      compose:
+        description: "Deploy all stacks or one Compose file"
+        required: true
+        default: all
+        type: choice
+        options:
+          - all
+          - active/actual-server.yaml
+          - active/adguard.yaml
+          - active/airtrail.yaml
+          - active/anythingllm.yaml
+          - active/atlas.yaml
+          - active/audio-book-request.yaml
+          - active/aveon.yaml
+          - active/bazarr.yaml
+          - active/bugsink.yaml
+          - active/calibre.yaml
+          - active/changedetectionio.yaml
+          - active/conaigh.yaml
+          - active/cyberchef.yaml
+          - active/dawarich.yaml
+          - active/ddclient.yaml
+          - active/deluge.yaml
+          - active/discovarr.yaml
+          - active/facil-map.yaml
+          - active/flaresolverr.yaml
+          - active/gatus.yaml
+          - active/gluetun.yaml
+          - active/hermes-dev/compose.yml
+          - active/home-assistant.yaml
+          - active/immich.yaml
+          - active/it-tools.yaml
+          - active/jellyfin.yaml
+          - active/kavita.yaml
+          - active/kitchen-owl.yaml
+          - active/lazylibrarian.yaml
+          - active/lucurlings.nl.yaml
+          - active/minio.yaml
+          - active/mqtt.yaml
+          - active/n8n.yaml
+          - active/nextcloud.yaml
+          - active/oauth.yaml
+          - active/ollama.yaml
+          - active/open-webui.yaml
+          - active/portainer.yaml
+          - active/prowlarr.yaml
+          - active/qbittorrent.yaml
+          - active/radarr.yaml
+          - active/rclone.yaml
+          - active/readarr.yaml
+          - active/ruview.yaml
+          - active/sabnzbd.yaml
+          - active/seerr.yaml
+          - active/socket-proxy.yaml
+          - active/sonarr.yaml
+          - active/timemachine.yaml
+          - active/traefik.yaml
+          - active/tubesync.yaml
+          - active/umami.yaml
+          - active/watch-watchtower.yaml
+          - active/watchtower.yaml
+          - active/whoami.yaml
+          - active/wizarr.yaml
 
 concurrency:
   group: homelab-deploy
@@ -29,26 +93,64 @@ jobs:
           git fetch --prune origin main
           git merge --ff-only origin/main
 
+      - name: Select Compose configuration
+        working-directory: /home/luc/docker/homelab
+        shell: bash
+        env:
+          REQUESTED_COMPOSE: ${{ inputs.compose || 'all' }}
+        run: |
+          set -euo pipefail
+
+          if [[ "$REQUESTED_COMPOSE" == "all" ]]; then
+            echo "COMPOSE_FILE=docker-compose.main.yaml" >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          compose_path=${REQUESTED_COMPOSE#./}
+          if [[ "$compose_path" != active/* ]]; then
+            compose_path="active/$compose_path"
+          fi
+
+          if [[ "$compose_path" == *..* || ! "$compose_path" =~ \.(yaml|yml)$ ]]; then
+            echo "Invalid Compose path: $REQUESTED_COMPOSE" >&2
+            exit 2
+          fi
+
+          if [[ ! -f "$compose_path" ]]; then
+            echo "Compose file does not exist: $compose_path" >&2
+            exit 2
+          fi
+
+          selected_compose="$RUNNER_TEMP/homelab-selected-compose.yaml"
+          sed '/^include:/,$d' docker-compose.main.yaml > "$selected_compose"
+          printf 'include:\n  - %s\n' "$PWD/$compose_path" >> "$selected_compose"
+
+          echo "Deploying only $compose_path"
+          echo "COMPOSE_FILE=$selected_compose" >> "$GITHUB_ENV"
+
       - name: Pull latest images
         working-directory: /home/luc/docker/homelab
-        run: >-
-          docker compose
-          --env-file homelab-configs/.env
-          -f docker-compose.main.yaml
-          pull
+        run: |
+          docker compose \
+            --project-name homelab \
+            --env-file homelab-configs/.env \
+            -f "$COMPOSE_FILE" \
+            pull
 
       - name: Validate Compose configuration
         working-directory: /home/luc/docker/homelab
-        run: >-
-          docker compose
-          --env-file homelab-configs/.env
-          -f docker-compose.main.yaml
-          config --quiet
+        run: |
+          docker compose \
+            --project-name homelab \
+            --env-file homelab-configs/.env \
+            -f "$COMPOSE_FILE" \
+            config --quiet
 
       - name: Deploy stack
         working-directory: /home/luc/docker/homelab
-        run: >-
-          docker compose
-          --env-file homelab-configs/.env
-          -f docker-compose.main.yaml
-          up -d
+        run: |
+          docker compose \
+            --project-name homelab \
+            --env-file homelab-configs/.env \
+            -f "$COMPOSE_FILE" \
+            up -d
