@@ -19,16 +19,38 @@ x-object-storage-environment: &object-storage-environment
 x-error-reporting-environment: &error-reporting-environment
   Sentry__Dsn: ${WATCHTOWER_SENTRY_DSN:-}
 
+x-web-push-environment: &web-push-environment
+    WebPush__PublicKey: ${WATCHTOWER_WEB_PUSH_PUBLIC_KEY:-}
+    WebPush__PrivateKey: ${WATCHTOWER_WEB_PUSH_PRIVATE_KEY:-}
+    WebPush__Subject: ${WATCHTOWER_WEB_PUSH_SUBJECT:-}
+
+x-ebay-environment: &ebay-environment
+  Ebay__Enabled: ${WATCHTOWER_EBAY_ENABLED:-false}
+  Ebay__Environment: ${WATCHTOWER_EBAY_ENVIRONMENT:-Sandbox}
+  Ebay__ClientId: ${WATCHTOWER_EBAY_CLIENT_ID:-}
+  Ebay__ClientSecret: ${WATCHTOWER_EBAY_CLIENT_SECRET:-}
+  Ebay__MarketplaceId: ${WATCHTOWER_EBAY_MARKETPLACE_ID:-EBAY_US}
+  Ebay__DeliveryCountry: ${WATCHTOWER_EBAY_DELIVERY_COUNTRY:-IE}
+  Ebay__DeliveryPostalCode: ${WATCHTOWER_EBAY_DELIVERY_POSTAL_CODE:-}
+  Ebay__AccountDeletionEndpoint: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_ENDPOINT:-}
+  Ebay__AccountDeletionVerificationToken: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_VERIFICATION_TOKEN:-}
+
 x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__PollIntervalMilliseconds: ${WATCHTOWER_WORKER_POLICY_POLL_INTERVAL_MILLISECONDS:-2000}
   WorkerPolicies__Chrono24FetchDefaultConcurrency: ${WATCHTOWER_CHRONO24_FETCH_DEFAULT_CONCURRENCY:-2}
   WorkerPolicies__Chrono24FetchHardMaximum: ${WATCHTOWER_CHRONO24_FETCH_HARD_MAXIMUM:-10}
+  WorkerPolicies__Chrono24FetchDefaultSessionRotationPageCount: ${WATCHTOWER_CHRONO24_FETCH_DEFAULT_SESSION_ROTATION_PAGE_COUNT:-25}
+  WorkerPolicies__Chrono24FetchSessionRotationHardMaximum: ${WATCHTOWER_CHRONO24_FETCH_SESSION_ROTATION_HARD_MAXIMUM:-1000}
   WorkerPolicies__Chrono24DiscoveryDefaultConcurrency: ${WATCHTOWER_WORKER_CHRONO24_DISCOVERY_DEFAULT_CONCURRENCY:-1}
   WorkerPolicies__Chrono24DiscoveryHardMaximum: ${WATCHTOWER_WORKER_CHRONO24_DISCOVERY_HARD_MAXIMUM:-3}
   WorkerPolicies__Chrono24DetailDefaultConcurrency: ${WATCHTOWER_WORKER_CHRONO24_DETAIL_DEFAULT_CONCURRENCY:-3}
   WorkerPolicies__Chrono24DetailHardMaximum: ${WATCHTOWER_WORKER_CHRONO24_DETAIL_HARD_MAXIMUM:-10}
   WorkerPolicies__ImageDefaultConcurrency: ${WATCHTOWER_WORKER_IMAGE_DEFAULT_CONCURRENCY:-2}
   WorkerPolicies__ImageHardMaximum: ${WATCHTOWER_WORKER_IMAGE_HARD_MAXIMUM:-10}
+  WorkerPolicies__EbayDiscoveryDefaultConcurrency: ${WATCHTOWER_WORKER_EBAY_DISCOVERY_DEFAULT_CONCURRENCY:-1}
+  WorkerPolicies__EbayDiscoveryHardMaximum: ${WATCHTOWER_WORKER_EBAY_DISCOVERY_HARD_MAXIMUM:-3}
+  WorkerPolicies__EbayDetailDefaultConcurrency: ${WATCHTOWER_WORKER_EBAY_DETAIL_DEFAULT_CONCURRENCY:-2}
+  WorkerPolicies__EbayDetailHardMaximum: ${WATCHTOWER_WORKER_EBAY_DETAIL_HARD_MAXIMUM:-10}
 
 
 x-application-service: &application-service
@@ -42,6 +64,7 @@ services:
   watchtower-postgres:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres
     image: ${WATCHTOWER_POSTGRES_IMAGE:-postgres:18.4-bookworm}
+    shm_size: ${WATCHTOWER_POSTGRES_SHM_SIZE:-512mb}
     environment:
       POSTGRES_DB: ${WATCHTOWER_POSTGRES_DB:-watchtower}
       POSTGRES_USER: ${WATCHTOWER_POSTGRES_USER:-watchtower}
@@ -149,7 +172,7 @@ services:
     working_dir: /app/migrator
     entrypoint: ["dotnet", "/app/migrator/Watchtower.Migrator.dll"]
     environment:
-      <<: [*database-environment, *error-reporting-environment]
+      <<: [*database-environment, *error-reporting-environment, *ebay-environment]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     healthcheck:
       disable: true
@@ -167,6 +190,8 @@ services:
           *database-environment,
           *object-storage-environment,
           *error-reporting-environment,
+          *web-push-environment,
+          *ebay-environment,
           *worker-policy-environment,
         ]
       ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
@@ -200,13 +225,14 @@ services:
       retries: 5
     labels:
       - "traefik.enable=true"
-      # HTTP Routers
       - "traefik.http.routers.watchtower.entrypoints=websecure"
       - "traefik.http.routers.watchtower.rule=Host(`watch.$DOMAINNAME`)"
-      # Middlewares
       - "traefik.http.routers.watchtower.middlewares=chain-oauth@file"
-      # Http Services
       - "traefik.http.routers.watchtower.service=watchtower-svc"
+      - "traefik.http.routers.watchtower-ebay-deletion.entrypoints=websecure"
+      - "traefik.http.routers.watchtower-ebay-deletion.rule=Host(`watch.$DOMAINNAME`) && Path(`/api/v1/marketplace/ebay/account-deletion`)"
+      - "traefik.http.routers.watchtower-ebay-deletion.priority=100"
+      - "traefik.http.routers.watchtower-ebay-deletion.service=watchtower-svc"
       - "traefik.http.services.watchtower-svc.loadbalancer.server.port=8080"
 
   watchtower-worker:
@@ -221,6 +247,8 @@ services:
           *rabbitmq-environment,
           *object-storage-environment,
           *error-reporting-environment,
+          *web-push-environment,
+          *ebay-environment,
           *worker-policy-environment,
         ]
       Chrono24__FlareSolverrEndpoint: http://watchtower-flaresolverr:8191/v1
@@ -250,7 +278,7 @@ services:
     working_dir: /app/scheduler
     entrypoint: ["dotnet", "/app/scheduler/Watchtower.Scheduler.dll"]
     environment:
-      <<: [*database-environment, *error-reporting-environment]
+      <<: [*database-environment, *error-reporting-environment, *ebay-environment]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     depends_on:
       watchtower-migrator:
