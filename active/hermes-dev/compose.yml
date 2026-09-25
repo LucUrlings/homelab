@@ -5,6 +5,7 @@ services:
     container_name: hermes
     image: ${HERMES_IMAGE:-nousresearch/hermes-agent:latest}
     restart: unless-stopped
+    pull_policy: always
     shm_size: 1gb
     command: ["gateway", "run"]
     environment:
@@ -53,6 +54,7 @@ services:
   companion:
     container_name: hermes-companion
     image: ${COMPANION_IMAGE:-ghcr.io/lucurlings/devctl-companion:latest}
+    pull_policy: always
     restart: unless-stopped
     environment:
       PUID: ${PUID:?Set PUID in .env}

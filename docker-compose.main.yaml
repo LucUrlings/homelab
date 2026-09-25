@@ -64,7 +64,7 @@ include:
   # - $USERDIR/docker/homelab/active/bazarr.yaml
 
 #  - $USERDIR/docker/homelab/active/gekko.yaml
-  - $USERDIR/docker/homelab/active/home-assistant.yaml
+  # - $USERDIR/docker/homelab/active/home-assistant.yaml
   # - $USERDIR/docker/homelab/active/actual-server.yaml
   - $USERDIR/docker/homelab/active/timemachine.yaml
   - $USERDIR/docker/homelab/active/tubesync.yaml
@@ -74,41 +74,31 @@ include:
 
 #  - $USERDIR/docker/homelab/active/gluetun.yaml
 #  - $USERDIR/docker/homelab/active/deluge.yaml
-  - $USERDIR/docker/homelab/active/flaresolverr.yaml
+  # - $USERDIR/docker/homelab/active/flaresolverr.yaml
 
   # - $USERDIR/docker/homelab/active/dawarich.yaml
   
-  - $USERDIR/docker/homelab/active/jellyfin.yaml
-  - $USERDIR/docker/homelab/active/seerr.yaml
-  - $USERDIR/docker/homelab/active/whoami.yaml
-  - $USERDIR/docker/homelab/active/sabnzbd.yaml
-
   - $USERDIR/docker/homelab/active/lazylibrarian.yaml
-  - $USERDIR/docker/homelab/active/kavita.yaml
+  # - $USERDIR/docker/homelab/active/kavita.yaml
   # - $USERDIR/docker/homelab/active/calibre.yaml
   
-  - $USERDIR/docker/homelab/active/sonarr.yaml
 #  - $USERDIR/docker/homelab/active/readarr.yaml
-  - $USERDIR/docker/homelab/active/radarr.yaml
   # - $USERDIR/docker/homelab/active/discovarr.yaml
 
-  - $USERDIR/docker/homelab/active/prowlarr.yaml
   # - $USERDIR/docker/homelab/active/it-tools.yaml
   # - $USERDIR/docker/homelab/active/cyberchef.yaml
 
   # - $USERDIR/docker/homelab/active/airtrail.yaml
   - $USERDIR/docker/homelab/active/facil-map.yaml
   # - $USERDIR/docker/homelab/active/audio-book-request.yaml
-  - $USERDIR/docker/homelab/active/immich.yaml
+  # - $USERDIR/docker/homelab/active/immich.yaml
 
   - $USERDIR/docker/homelab/active/mqtt.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
-  - $USERDIR/docker/homelab/active/rclone.yaml
   # - $USERDIR/docker/homelab/active/kitchen-owl.yaml
 
   # - $USERDIR/docker/homelab/active/n8n.yaml
 
-  - $USERDIR/docker/homelab/active/aveon.yaml
   # - $USERDIR/docker/homelab/active/ruview.yaml
   # - $USERDIR/docker/homelab/active/minio.yaml
 
@@ -118,3 +108,16 @@ include:
   - $USERDIR/docker/homelab/active/atlas.yaml
   - $USERDIR/docker/homelab/active/watch-watchtower.yaml
   - $USERDIR/docker/homelab/active/hermes-dev/compose.yml
+  - $USERDIR/docker/homelab/active/minecraft.yaml
+  - $USERDIR/docker/homelab/active/aveon.yaml
+  # For backing up configs to Google Drive, see https://rclone.org/commands/rclone_sync/
+  - $USERDIR/docker/homelab/active/rclone.yaml
+
+  # Media stack
+  - $USERDIR/docker/homelab/active/sonarr.yaml
+  - $USERDIR/docker/homelab/active/radarr.yaml
+  - $USERDIR/docker/homelab/active/prowlarr.yaml
+  - $USERDIR/docker/homelab/active/jellyfin.yaml
+  - $USERDIR/docker/homelab/active/seerr.yaml
+  - $USERDIR/docker/homelab/active/whoami.yaml
+  - $USERDIR/docker/homelab/active/sabnzbd.yaml

@@ -32,8 +32,15 @@ x-ebay-environment: &ebay-environment
   Ebay__MarketplaceId: ${WATCHTOWER_EBAY_MARKETPLACE_ID:-EBAY_US}
   Ebay__DeliveryCountry: ${WATCHTOWER_EBAY_DELIVERY_COUNTRY:-IE}
   Ebay__DeliveryPostalCode: ${WATCHTOWER_EBAY_DELIVERY_POSTAL_CODE:-}
+
+x-ebay-compliance-api-environment: &ebay-compliance-api-environment
   Ebay__AccountDeletionEndpoint: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_ENDPOINT:-}
   Ebay__AccountDeletionVerificationToken: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_VERIFICATION_TOKEN:-}
+
+x-ebay-compliance-worker-environment: &ebay-compliance-worker-environment
+  Ebay__Environment: ${WATCHTOWER_EBAY_ENVIRONMENT:-Sandbox}
+  Ebay__ClientId: ${WATCHTOWER_EBAY_CLIENT_ID:-}
+  Ebay__ClientSecret: ${WATCHTOWER_EBAY_CLIENT_SECRET:-}
 
 x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__PollIntervalMilliseconds: ${WATCHTOWER_WORKER_POLICY_POLL_INTERVAL_MILLISECONDS:-2000}
@@ -60,11 +67,21 @@ x-application-service: &application-service
   networks:
     - watchtower-infrastructure
 
+x-ebay-compliance-service: &ebay-compliance-service
+  image: ${WATCHTOWER_EBAY_COMPLIANCE_IMAGE:-ghcr.io/lucurlings/watchtower-ebay-compliance}:${WATCHTOWER_EBAY_COMPLIANCE_IMAGE_TAG:-latest}
+  pull_policy: always
+  restart: unless-stopped
+  mem_reservation: ${WATCHTOWER_EBAY_COMPLIANCE_MEMORY_RESERVATION:-64m}
+  mem_limit: ${WATCHTOWER_EBAY_COMPLIANCE_MEMORY_LIMIT:-192m}
+  networks:
+    - watchtower-infrastructure
+
 services:
   watchtower-postgres:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres
     image: ${WATCHTOWER_POSTGRES_IMAGE:-postgres:18.4-bookworm}
     shm_size: ${WATCHTOWER_POSTGRES_SHM_SIZE:-512mb}
+    init: true
     environment:
       POSTGRES_DB: ${WATCHTOWER_POSTGRES_DB:-watchtower}
       POSTGRES_USER: ${WATCHTOWER_POSTGRES_USER:-watchtower}
@@ -77,8 +94,17 @@ services:
     healthcheck:
       test:
         [
-          "CMD-SHELL",
-          "pg_isready -U ${WATCHTOWER_POSTGRES_USER:-watchtower} -d ${WATCHTOWER_POSTGRES_DB:-watchtower}",
+          "CMD",
+          "pg_isready",
+          "-q",
+          "-h",
+          "127.0.0.1",
+          "-U",
+          "${WATCHTOWER_POSTGRES_USER:-watchtower}",
+          "-d",
+          "${WATCHTOWER_POSTGRES_DB:-watchtower}",
+          "-t",
+          "4",
         ]
       interval: 10s
       timeout: 5s
@@ -87,6 +113,7 @@ services:
   watchtower-rabbitmq:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-rabbitmq
     image: ${WATCHTOWER_RABBITMQ_IMAGE:-rabbitmq:4.2.9-management-alpine}
+    hostname: ${WATCHTOWER_RABBITMQ_HOSTNAME:-8fd9d719d85a}
     environment:
       RABBITMQ_DEFAULT_USER: ${WATCHTOWER_RABBITMQ_USER:-watchtower}
       RABBITMQ_DEFAULT_PASS: ${WATCHTOWER_RABBITMQ_PASSWORD:?Set WATCHTOWER_RABBITMQ_PASSWORD}
@@ -181,6 +208,84 @@ services:
       watchtower-postgres:
         condition: service_healthy
 
+  watchtower-ebay-compliance-api:
+    <<: *ebay-compliance-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-ebay-compliance-api
+    command: ["api"]
+    environment:
+      <<:
+        [
+          *rabbitmq-environment,
+          *error-reporting-environment,
+          *ebay-compliance-api-environment,
+        ]
+      ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
+      ASPNETCORE_HTTP_PORTS: "8080"
+      AllowedHosts: ${WATCHTOWER_ALLOWED_HOSTS:-watch.lucurlings.nl;localhost;127.0.0.1}
+      HEALTHCHECK_URL: http://127.0.0.1:8080/health
+    networks:
+      - watchtower-infrastructure
+      - t3_proxy
+    depends_on:
+      watchtower-rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "dotnet",
+          "Watchtower.EbayCompliance.dll",
+          "api",
+          "--healthcheck",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=t3_proxy"
+      - "traefik.http.routers.watchtower-ebay-deletion.entrypoints=websecure"
+      - "traefik.http.routers.watchtower-ebay-deletion.rule=Host(`watch.$DOMAINNAME`) && Path(`/api/v1/marketplace/ebay/account-deletion`)"
+      - "traefik.http.routers.watchtower-ebay-deletion.priority=100"
+      - "traefik.http.routers.watchtower-ebay-deletion.service=watchtower-ebay-compliance-svc"
+      - "traefik.http.services.watchtower-ebay-compliance-svc.loadbalancer.server.port=8080"
+
+  watchtower-ebay-compliance-worker:
+    <<: *ebay-compliance-service
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-ebay-compliance-worker
+    command: ["worker"]
+    environment:
+      <<:
+        [
+          *database-environment,
+          *rabbitmq-environment,
+          *error-reporting-environment,
+          *ebay-compliance-worker-environment,
+        ]
+      DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
+    depends_on:
+      watchtower-migrator:
+        condition: service_completed_successfully
+      watchtower-rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "dotnet",
+          "Watchtower.EbayCompliance.dll",
+          "worker",
+          "--healthcheck",
+        ]
+      interval: 10s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    networks:
+      - watchtower-application
+      - watchtower-infrastructure
+        
   watchtower-web:
     <<: *application-service
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-web
@@ -229,10 +334,6 @@ services:
       - "traefik.http.routers.watchtower.rule=Host(`watch.$DOMAINNAME`)"
       - "traefik.http.routers.watchtower.middlewares=chain-oauth@file"
       - "traefik.http.routers.watchtower.service=watchtower-svc"
-      - "traefik.http.routers.watchtower-ebay-deletion.entrypoints=websecure"
-      - "traefik.http.routers.watchtower-ebay-deletion.rule=Host(`watch.$DOMAINNAME`) && Path(`/api/v1/marketplace/ebay/account-deletion`)"
-      - "traefik.http.routers.watchtower-ebay-deletion.priority=100"
-      - "traefik.http.routers.watchtower-ebay-deletion.service=watchtower-svc"
       - "traefik.http.services.watchtower-svc.loadbalancer.server.port=8080"
 
   watchtower-worker:

@@ -1,0 +1,27 @@
+services:
+  minecraft:
+    container_name: minecraft
+    image: itzg/minecraft-server:latest
+    tty: true
+    stdin_open: true
+    # ports:
+    #   - "25565:25565"
+    environment:
+      EULA: "TRUE"
+      MEMORY: "3072M"
+      MAX_PLAYERS: "10"
+      ENABLE_WHITELIST: "true"
+      WHITELIST: |-
+        xdZeta
+        The__EpsiloN
+      SERVER_NAME: "Luc's server"
+    volumes:
+      - $INTERNALDIR/minecraft:/data
+    networks:
+      - t3_proxy
+    labels:
+      - "traefik.enable=true"
+      - "traefik.tcp.routers.minecraft.entrypoints=minecraft"
+      - "traefik.tcp.routers.minecraft.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.minecraft.service=minecraft-svc"
+      - "traefik.tcp.services.minecraft-svc.loadbalancer.server.port=25565"

@@ -16,6 +16,7 @@ services:
       - --global.sendAnonymousUsage=true
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+      - --entrypoints.minecraft.address=:25565
       - --entrypoints.websecure.http.tls=true
       - --entrypoints.traefik.address=:8080
       # - --entrypoints.ping.address=:8081
@@ -91,6 +92,11 @@ services:
       #   published: 8080
       #   protocol: tcp
       #   mode: host
+      # Minecraft
+      - target: 25565
+        published: 25565
+        protocol: tcp
+        mode: host
     volumes:
       - $DOCKERDIR/appdata/traefik3/rules:/rules # Dynamic File Provider directory
       # - /var/run/docker.sock:/var/run/docker.sock:ro # Enable if not using Socket Proxy
