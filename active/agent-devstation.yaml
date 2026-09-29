@@ -1,0 +1,82 @@
+services:
+  agent-devstation:
+    image: ghcr.io/lucurlings/agent-devstation:${DEVSTATION_TAG:-nightly}
+    hostname: agent-devspace
+    container_name: agent-devspace
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    security_opt:
+      - seccomp=unconfined
+      - apparmor=unconfined
+    environment:
+      AGENT_DEVSTATION_SDK_NODE: ${AGENT_DEVSTATION_SDK_NODE-24}
+      AGENT_DEVSTATION_SDK_DOTNET: ${AGENT_DEVSTATION_SDK_DOTNET-10}
+      AGENT_DEVSTATION_VSCODE_EDITOR_ENABLED: ${AGENT_DEVSTATION_VSCODE_EDITOR_ENABLED-true}
+      AGENT_DEVSTATION_VSCODE_PASSWORD: dikke-banaan # ${AGENT_DEVSTATION_VSCODE_PASSWORD-}
+      AGENT_DEVSTATION_UID: ${AGENT_DEVSTATION_UID-1000}
+      AGENT_DEVSTATION_GID: ${AGENT_DEVSTATION_GID-1000}
+      DOCKER_HOST: tcp://agent-devstation-docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+    volumes:
+      - $DOCKERDIR/appdata/agent-devstation/workspaces:/home/dev/workspaces
+      - agent-devstation-home:/home/dev
+      - agent-devstation-docker-client:/certs/client:ro
+    # Uncomment only when enabling the editor for local access.
+    # ports:
+    #   - "127.0.0.1:8080:8080"
+    networks:
+      - t3_proxy
+      - agent-devstation-docker-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.agent-devstation.entrypoints=websecure"
+      - "traefik.http.routers.agent-devstation.rule=Host(`agent-devstation.$DOMAINNAME`)"
+      - "traefik.http.routers.agent-devstation.middlewares=chain-oauth@file"
+      - "traefik.http.routers.agent-devstation.service=agent-devstation-svc"
+      - "traefik.http.services.agent-devstation-svc.loadbalancer.server.port=8080"
+    depends_on:
+      agent-devstation-docker:
+        condition: service_healthy
+
+  agent-devstation-docker:
+    image: docker:29.8.1-dind
+    hostname: agent-devstation-docker
+    container_name: agent-devspace-docker
+    privileged: true
+    restart: unless-stopped
+    stop_grace_period: 60s
+    environment:
+      DOCKER_TLS_CERTDIR: /certs
+    volumes:
+      # Exactly the same source and destination as Agent Devstation:
+      - ${DOCKERDIR}/appdata/agent-devstation/workspaces:/home/dev/workspaces
+      - agent-devstation-docker-data:/var/lib/docker
+      - agent-devstation-docker-ca:/certs/ca
+      - agent-devstation-docker-client:/certs/client
+    networks:
+      - agent-devstation-docker-network
+    healthcheck:
+      test:
+        ["CMD", "docker", "--host=unix:///var/run/docker.sock", "info"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+      start_period: 20s
+    # ports:
+    #   - "127.0.0.1:5180:5180" # Watchtower frontend
+    #   - "127.0.0.1:5080:5080" # Watchtower API
+    labels:
+      - "traefik.enable=false"
+volumes:
+  agent-devstation-home:
+  agent-devstation-docker-data:
+  agent-devstation-docker-ca:
+  agent-devstation-docker-client:
+
+networks:
+  t3_proxy:
+    external: true
+  agent-devstation-docker-network:
+    driver: bridge

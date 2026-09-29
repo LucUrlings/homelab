@@ -20,9 +20,9 @@ x-error-reporting-environment: &error-reporting-environment
   Sentry__Dsn: ${WATCHTOWER_SENTRY_DSN:-}
 
 x-web-push-environment: &web-push-environment
-    WebPush__PublicKey: ${WATCHTOWER_WEB_PUSH_PUBLIC_KEY:-}
-    WebPush__PrivateKey: ${WATCHTOWER_WEB_PUSH_PRIVATE_KEY:-}
-    WebPush__Subject: ${WATCHTOWER_WEB_PUSH_SUBJECT:-}
+  WebPush__PublicKey: ${WATCHTOWER_WEB_PUSH_PUBLIC_KEY:-}
+  WebPush__PrivateKey: ${WATCHTOWER_WEB_PUSH_PRIVATE_KEY:-}
+  WebPush__Subject: ${WATCHTOWER_WEB_PUSH_SUBJECT:-}
 
 x-ebay-environment: &ebay-environment
   Ebay__Enabled: ${WATCHTOWER_EBAY_ENABLED:-false}
@@ -80,6 +80,7 @@ services:
   watchtower-postgres:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres
     image: ${WATCHTOWER_POSTGRES_IMAGE:-postgres:18.4-bookworm}
+    command: ["postgres", "-c", "shared_preload_libraries=pg_stat_statements"]
     shm_size: ${WATCHTOWER_POSTGRES_SHM_SIZE:-512mb}
     init: true
     environment:

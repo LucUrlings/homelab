@@ -54,7 +54,7 @@ include:
 #  - $USERDIR/docker/homelab/active/tailscale.yaml
 
   # - $USERDIR/docker/homelab/active/anythingllm.yaml
-  # - $USERDIR/docker/homelab/active/ollama.yaml
+  - $USERDIR/docker/homelab/active/ollama.yaml
   # - $USERDIR/docker/homelab/active/open-webui.yaml
 
   # - $USERDIR/docker/homelab/active/changedetectionio.yaml
@@ -67,7 +67,7 @@ include:
   # - $USERDIR/docker/homelab/active/home-assistant.yaml
   # - $USERDIR/docker/homelab/active/actual-server.yaml
   - $USERDIR/docker/homelab/active/timemachine.yaml
-  - $USERDIR/docker/homelab/active/tubesync.yaml
+  # - $USERDIR/docker/homelab/active/tubesync.yaml
   - $USERDIR/docker/homelab/active/socket-proxy.yaml
   - $USERDIR/docker/homelab/active/oauth.yaml
   - $USERDIR/docker/homelab/active/wizarr.yaml
@@ -108,6 +108,7 @@ include:
   - $USERDIR/docker/homelab/active/atlas.yaml
   - $USERDIR/docker/homelab/active/watch-watchtower.yaml
   - $USERDIR/docker/homelab/active/hermes-dev/compose.yml
+  - $USERDIR/docker/homelab/active/agent-devstation.yaml
   - $USERDIR/docker/homelab/active/minecraft.yaml
   - $USERDIR/docker/homelab/active/aveon.yaml
   # For backing up configs to Google Drive, see https://rclone.org/commands/rclone_sync/
