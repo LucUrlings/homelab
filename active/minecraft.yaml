@@ -2,18 +2,21 @@ services:
   minecraft:
     container_name: minecraft
     image: itzg/minecraft-server:latest
+    restart: unless-stopped
     tty: true
     stdin_open: true
     # ports:
     #   - "25565:25565"
     environment:
       EULA: "TRUE"
-      MEMORY: "3072M"
+      MEMORY: "4096M"
       MAX_PLAYERS: "10"
       ENABLE_WHITELIST: "true"
       WHITELIST: |-
         xdZeta
-        The__EpsiloN
+        dimou42
+        endaken
+        Nilululu
       SERVER_NAME: "Luc's server"
     volumes:
       - $INTERNALDIR/minecraft:/data

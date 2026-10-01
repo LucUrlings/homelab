@@ -54,7 +54,7 @@ include:
 #  - $USERDIR/docker/homelab/active/tailscale.yaml
 
   # - $USERDIR/docker/homelab/active/anythingllm.yaml
-  - $USERDIR/docker/homelab/active/ollama.yaml
+  # - $USERDIR/docker/homelab/active/ollama.yaml
   # - $USERDIR/docker/homelab/active/open-webui.yaml
 
   # - $USERDIR/docker/homelab/active/changedetectionio.yaml
@@ -89,11 +89,11 @@ include:
   # - $USERDIR/docker/homelab/active/cyberchef.yaml
 
   # - $USERDIR/docker/homelab/active/airtrail.yaml
-  - $USERDIR/docker/homelab/active/facil-map.yaml
+  # - $USERDIR/docker/homelab/active/facil-map.yaml
   # - $USERDIR/docker/homelab/active/audio-book-request.yaml
   # - $USERDIR/docker/homelab/active/immich.yaml
 
-  - $USERDIR/docker/homelab/active/mqtt.yaml
+  # - $USERDIR/docker/homelab/active/mqtt.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
   # - $USERDIR/docker/homelab/active/kitchen-owl.yaml
 
