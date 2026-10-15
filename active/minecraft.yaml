@@ -3,12 +3,21 @@ services:
     container_name: minecraft
     image: itzg/minecraft-server:latest
     restart: unless-stopped
+    cpu_shares: 10240
     tty: true
     stdin_open: true
     # ports:
     #   - "25565:25565"
     environment:
       EULA: "TRUE"
+      VERSION: "26.3"
+      TYPE: "FABRIC"
+      MODRINTH_PROJECTS: |-
+        fabric-api
+        lithium
+        ferrite-core
+        krypton
+        journeymap
       MEMORY: "4096M"
       MAX_PLAYERS: "10"
       ENABLE_WHITELIST: "true"
@@ -17,6 +26,7 @@ services:
         dimou42
         endaken
         Nilululu
+        Rooooox
       SERVER_NAME: "Luc's server"
     volumes:
       - $INTERNALDIR/minecraft:/data

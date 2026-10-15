@@ -77,6 +77,23 @@ x-ebay-compliance-service: &ebay-compliance-service
     - watchtower-infrastructure
 
 services:
+  watchtower-decider:
+    container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-decider
+    image: ${WATCHTOWER_DECIDER_IMAGE:-ghcr.io/lucurlings/watchtower-decider}:${WATCHTOWER_DECIDER_IMAGE_TAG:-latest}
+    platform: linux/amd64
+    restart: unless-stopped
+    cpu_shares: ${WATCHTOWER_DECIDER_CPU_SHARES:-128}
+    mem_limit: ${WATCHTOWER_DECIDER_MEMORY_LIMIT:-4g}
+    memswap_limit: ${WATCHTOWER_DECIDER_MEMORY_LIMIT:-4g}
+    environment:
+      DECIDER_API_KEY: ${WATCHTOWER_DECIDER_API_KEY:-}
+    volumes:
+      - watchtower-decider-models:/cache
+    networks:
+      watchtower-infrastructure:
+        aliases: ["decider"]
+      watchtower-application:
+
   watchtower-postgres:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres
     image: ${WATCHTOWER_POSTGRES_IMAGE:-postgres:18.4-bookworm}
@@ -147,6 +164,7 @@ services:
     container_name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-flaresolverr
     image: ${WATCHTOWER_FLARESOLVERR_IMAGE:-ghcr.io/flaresolverr/flaresolverr:v3.5.0}
     shm_size: ${WATCHTOWER_FLARESOLVERR_SHM_SIZE:-1gb}
+    cpu_shares: ${WATCHTOWER_FLARESOLVERR_CPU_SHARES:-128}
     environment:
       LOG_LEVEL: info
       LOG_HTML: "false"
@@ -399,6 +417,7 @@ volumes:
     name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-rabbitmq-data
   watchtower-minio-data:
     name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-minio-data
+  watchtower-decider-models:
 
 networks:
   watchtower-application:
