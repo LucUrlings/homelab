@@ -107,7 +107,7 @@ include:
   - $USERDIR/docker/homelab/active/lucurlings.nl.yaml
   - $USERDIR/docker/homelab/active/atlas.yaml
   - $USERDIR/docker/homelab/active/watch-watchtower.yaml
-  - $USERDIR/docker/homelab/active/hermes-dev/compose.yml
+  # - $USERDIR/docker/homelab/active/hermes-dev/compose.yml
   - $USERDIR/docker/homelab/active/agent-devstation.yaml
   - $USERDIR/docker/homelab/active/minecraft.yaml
   - $USERDIR/docker/homelab/active/aveon.yaml
