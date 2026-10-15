@@ -1,213 +1,226 @@
 # Homelab Docker Stack
 
-This repository contains the Docker Compose configuration for my homelab. The main entry point is `docker-compose.main.yaml`, which defines shared networks and secrets, then includes individual service stacks from `active/`.
+## Run It Now
 
-The stack is built around Traefik, Cloudflare DNS, OAuth forward auth, and per-application Compose files. Most web services attach to the shared `t3_proxy` network and are exposed through Traefik using hosts under `$DOMAINNAME`.
+Run these commands from the deployment host. They validate, pull, and start the always-on core first, then the restartable application stack:
+
+```bash
+cd /home/luc/docker/homelab
+
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml config --quiet
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml pull
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml up -d
+
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml config --quiet
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml pull
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml up -d
+```
+
+For an ordinary restart of application workloads without touching core infrastructure:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml restart
+```
+
+Use `up -d` instead of `restart` after changing Compose configuration. Do not combine the two root files into one Compose command; they are intentionally separate lifecycle boundaries.
+
+## Architecture
+
+The deployment has two root Compose models:
+
+- `docker-compose.core.yaml` owns always-on infrastructure, shared networks, and file-backed secrets.
+
+- `docker-compose.main.yaml` owns application workloads that can be restarted without interrupting DNS, ingress, authentication, monitoring, or Docker management.
+
+Both use the Compose project name `homelab`. Service definitions live in `active/` and are pulled into a root model with Compose `include` entries.
+
+### Core stack
+
+| File | Service | Purpose | Access |
+| --- | --- | --- | --- |
+| `socket-proxy.yaml` | Docker Socket Proxy | Restricted Docker API for Traefik and Portainer | Host port `2375` |
+| `traefik.yaml` | Traefik | HTTPS ingress, TLS, dashboard, and Minecraft TCP routing | Ports `80`, `443`, `25565`; `traefik.$DOMAINNAME` |
+| `oauth.yaml` | Traefik Forward Auth | Google OAuth middleware backend | `oauth.$DOMAINNAME` |
+| `adguard.yaml` | AdGuard Home | LAN DNS filtering | Ports `53/tcp`, `53/udp`, `3000` |
+| `ddclient.yaml` | ddclient | Dynamic DNS updates | No UI |
+| `gatus.yaml` | Gatus | Availability monitoring and status page | `gatus.$DOMAINNAME`, `status.$DOMAINNAME` |
+| `portainer.yaml` | Portainer EE | Docker management | Port `9000`; `portainer.$DOMAINNAME` |
+| `watchtower.yaml` | Watchtower | Automated container image updates | Port `8086` |
+
+### Main stack
+
+| File | Main service(s) | Purpose | Access |
+| --- | --- | --- | --- |
+| `timemachine.yaml` | Time Machine | macOS network backups | Host networking |
+| `wizarr.yaml` | Wizarr | Media-server onboarding and invitations | `wizarr.$DOMAINNAME` |
+| `lazylibrarian.yaml` | LazyLibrarian | Book and audiobook automation | `lazylibrarian.$DOMAINNAME`, `ll.$DOMAINNAME` |
+| `umami.yaml` | Umami, PostgreSQL | Web analytics | `umami.$DOMAINNAME` |
+| `bugsink.yaml` | Bugsink, PostgreSQL | Error tracking | `bugsink.$DOMAINNAME` |
+| `lucurlings.nl.yaml` | Personal website | Public website | `$DOMAINNAME` |
+| `atlas.yaml` | Atlas frontend and backend | Expeditions Through Time application | `atlas.$DOMAINNAME` |
+| `watch-watchtower.yaml` | Web, workers, scheduler, PostgreSQL, RabbitMQ, MinIO, FlareSolverr | Watch marketplace monitoring application | `watch.$DOMAINNAME`, `watch-minio.$DOMAINNAME`, `watch-rabbitmq.$DOMAINNAME` |
+| `agent-devstation.yaml` | Devstation, Docker-in-Docker, pruner, disk health | Browser-based development environment | `agent-devstation.$DOMAINNAME` |
+| `minecraft.yaml` | Minecraft server | Game server | TCP port `25565` through Traefik |
+| `aveon.yaml` | Aveon, PostgreSQL, Redis | Flight search application | `aveon.$DOMAINNAME` |
+| `rclone.yaml` | rclone | One-way configuration backup to Google Drive | No UI |
+| `sonarr.yaml` | Sonarr | TV automation | Port `8989`; `sonarr.$DOMAINNAME` |
+| `radarr.yaml` | Radarr | Movie automation | Port `7878`; `radarr.$DOMAINNAME` |
+| `prowlarr.yaml` | Prowlarr | Indexer management | Port `9696`; `prowlarr.$DOMAINNAME` |
+| `jellyfin.yaml` | Jellyfin | Media server | Port `8096`; `jellyfin.$DOMAINNAME` |
+| `seerr.yaml` | Seerr | Media requests | `jellyseerr.$DOMAINNAME`, `seerr.$DOMAINNAME` |
+| `whoami.yaml` | Traefik Whoami | Routing test endpoint | `whoami.$DOMAINNAME` |
+| `sabnzbd.yaml` | SABnzbd | Usenet downloader | Port `8084`; `sabnzbd.$DOMAINNAME` |
+
+## Networks
+
+| Network | Owner | Subnet | Purpose |
+| --- | --- | --- | --- |
+| `t3_proxy` | Core | `192.168.90.0/24` | Shared network for Traefik-routed services |
+| `socket_proxy` | Core | `192.168.91.0/24` | Restricted Docker API network |
+| `homelab_core_default` | Core | Docker-assigned | Default network for core-only services |
+| `homelab_main_default` | Main | Docker-assigned | Default network for main-only services |
+
+The main model declares `t3_proxy` and `socket_proxy` as external, so core must be started first. Application-specific networks remain in their individual service files.
+
+## Configuration and Secrets
+
+The deployed environment file is `homelab-configs/.env`; `.env.example` is the repository template. Important shared settings include:
+
+- Host identity and paths: `PUID`, `PGID`, `TZ`, `USERDIR`, `DOCKERDIR`, `DATADIR`, `INTERNALDIR`, `SECRETSDIR`.
+
+- Routing: `DOMAINNAME`, `CLOUDFLARE_IPS`, `LOCAL_IPS`, and `TRAEFIK_AUTH_BYPASS_KEY`.
+
+- Service-specific credentials and settings for Time Machine, Aveon, Bugsink, Umami, Watch Watchtower, Agent Devstation, and rclone.
+
+The core model declares these files from `$SECRETSDIR`:
+
+| Secret | Current use |
+| --- | --- |
+| `basic_auth_credentials` | Traefik basic-auth middleware data |
+| `cf_dns_api_token` | Traefik Cloudflare DNS challenge |
+| `traefik_forward_auth` | OAuth provider configuration |
+| `shoutrrr_telegram_secret` | Watchtower notifications |
+| `mysql_root_password` | Reserved for optional stacks |
+| `authelia_jwt_secret` | Reserved for Authelia |
+| `authelia_session_secret` | Reserved for Authelia |
+| `authelia_storage_encryption_key` | Reserved for Authelia |
+| `guac_db_name` | Reserved for Guacamole |
+| `guac_mysql_user` | Reserved for Guacamole |
+| `guac_mysql_password` | Reserved for Guacamole |
+
+Keep the environment file, app-specific environment files, and `$SECRETSDIR` out of version control.
+
+## Operations
+
+Show current status:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml ps
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml ps
+```
+
+Apply configuration or image changes to main without stopping core:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml pull
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml up -d
+```
+
+Stop and recreate all main workloads:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml down
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml up -d
+```
+
+View logs for one service using the root model that owns it:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml logs -f traefik
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml logs -f jellyfin
+```
+
+Validate after editing:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml config --quiet
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml config --quiet
+```
+
+## Rclone Google Drive Sync
+
+The included `rclone` service mirrors `$DOCKERDIR` to the configured Google Drive remote. It runs once at startup and then every `RCLONE_SYNC_INTERVAL_SECONDS` seconds. Deletions are mirrored to the destination, and the local source is mounted read-only.
+
+Create and verify the remote interactively before the first normal deployment:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone config
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone lsd google-drive:
+```
+
+The defaults are remote name `google-drive`, destination `homelab-configs`, and a sync interval of 86400 seconds.
+
+## Automatic Deployment
+
+`.github/workflows/deploy.yml` runs on the self-hosted runner labelled `homelab`. On every push to `main`, it fast-forwards `/home/luc/docker/homelab`, pulls and validates both models, then deploys core before main.
+
+Manual workflow runs support:
+
+- `all` for core followed by main.
+
+- `core` or `main` for one complete lifecycle group.
+
+- An individual file from `active/`; the workflow automatically selects the matching core or main base model.
+
+All deployments use the `homelab` project name and `homelab-configs/.env`.
+
+## Available but Disabled
+
+The following files exist under `active/` but are not included by either root Compose model:
+
+- `actual-server.yaml`, `airtrail.yaml`, `anythingllm.yaml`, `audio-book-request.yaml`
+
+- `bazarr.yaml`, `calibre.yaml`, `changedetectionio.yaml`, `conaigh.yaml`, `cyberchef.yaml`
+
+- `dawarich.yaml`, `deluge.yaml`, `discovarr.yaml`, `facil-map.yaml`, `flaresolverr.yaml`, `gluetun.yaml`
+
+- `hermes-dev/compose.yml`, `home-assistant.yaml`, `immich.yaml`, `it-tools.yaml`
+
+- `kavita.yaml`, `kitchen-owl.yaml`, `minio.yaml`, `mqtt.yaml`, `n8n.yaml`, `nextcloud.yaml`
+
+- `ollama.yaml`, `open-webui.yaml`, `qbittorrent.yaml`, `readarr.yaml`, `ruview.yaml`, `tubesync.yaml`
+
+`deluge.yaml` and `qbittorrent.yaml` require the disabled `gluetun.yaml` service because they use `network_mode: service:gluetun`.
 
 ## Repository Layout
 
 | Path | Purpose |
 | --- | --- |
-| `docker-compose.main.yaml` | Main Compose file. Defines global networks, secrets, and the included active stacks. |
-| `active/` | Service stack fragments. Each file usually owns one app, plus any app-specific database, cache, or worker containers. |
-| `inactive/` | Disabled or parked stack fragments. These are not launched by the main Compose file. |
-| `.env.example` | Template for required environment variables. |
-| `homelab-configs/` | Local configuration material for deployed services. |
+| `docker-compose.core.yaml` | Always-on infrastructure, shared network ownership, and secrets |
+| `docker-compose.main.yaml` | Restartable application workloads |
+| `active/` | Available service stack fragments |
+| `inactive/` | Parked legacy or experimental stack fragments |
+| `.env.example` | Environment template |
+| `homelab-configs/` | Deployed environment, secrets, and application configuration |
 
-## Core Architecture
+## Adding or Enabling a Stack
 
-- **Reverse proxy:** Traefik 3 terminates HTTPS on ports `80` and `443`, routes by hostname, and uses the Docker provider plus file-provider rules from `$DOCKERDIR/appdata/traefik3/rules`.
-- **TLS:** Traefik uses the Cloudflare DNS challenge for Let's Encrypt wildcard certificates.
-- **Authentication:** Most private services use `chain-oauth@file`, backed by `traefik-forward-auth` and Google OAuth. Some public or invite flows intentionally use `chain-no-auth@file`.
-- **Docker API access:** Traefik, Portainer, Gatus, Watchtower, and other tooling use the `socket_proxy` network where possible.
-- **Persistence:** App configuration normally lives in `$DOCKERDIR/appdata/...`; larger media and data libraries live under `$DATADIR` or `$INTERNALDIR`.
+1. Add or edit its Compose file under `active/`.
+2. Attach routed web services to `t3_proxy` and add Traefik labels.
+3. Use a private application network for databases, caches, and workers.
+4. Add required settings to `.env.example` and the deployed environment file.
+5. Add infrastructure to `docker-compose.core.yaml`; add ordinary workloads to `docker-compose.main.yaml`.
+6. Validate the owning root model with `docker compose ... config --quiet`.
+7. Apply it with `docker compose ... up -d`.
 
-## Shared Networks
+## Security Notes
 
-| Network | Subnet | Purpose |
-| --- | --- | --- |
-| `t3_proxy` | `192.168.90.0/24` | Shared reverse-proxy network for Traefik-routed services. |
-| `socket_proxy` | `192.168.91.0/24` | Isolated Docker socket proxy network. |
-| `default` | Docker bridge | Default network for services that do not need proxy access. |
+- Socket Proxy publishes port `2375`; restrict it at the host and network perimeter.
 
-Several stacks also define private per-app bridge networks, such as `airtrail_network`, `immich_network`, `dawarich_network`, `tubesync_network`, and `aveon-network`.
+- Watchtower mounts `/var/run/docker.sock` directly and can update or restart any container.
 
-## Required Configuration
+- Use a narrowly scoped Cloudflare DNS token for certificate issuance.
 
-Create a local `.env` from `.env.example` and fill in the host paths, identity values, domain settings, and provider credentials.
+- Review every route using `chain-no-auth@file` before publishing its DNS record.
 
-Important variables include:
-
-- `PUID`, `PGID`, `TZ`
-- `USERDIR`, `DOCKERDIR`, `DATADIR`, `INTERNALDIR`, `SECRETSDIR`
-- `DOMAINNAME`, `HOSTURL`
-- `CLOUDFLARE_EMAIL`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ZONEID`, `CLOUDFLARE_IPS`
-- `LOCAL_IPS`, `SERVER_IP`
-- `TRAEFIK_AUTH_BYPASS_KEY`
-- `RCLONE_REMOTE_NAME`, `RCLONE_REMOTE_PATH`, `RCLONE_SYNC_INTERVAL_SECONDS`
-- App-specific variables for Immich, AirTrail, Aveon, Time Machine, and other stacks that reference `${...}` values.
-
-Secrets are read from `$SECRETSDIR` by `docker-compose.main.yaml`, including:
-
-- `basic_auth_credentials`
-- `cf_dns_api_token`
-- `traefik_forward_auth`
-- `shoutrrr_telegram_secret`
-- Authelia and Guacamole secrets retained for inactive or optional stacks
-
-## Rclone Google Drive Sync
-
-The included `rclone` service mirrors `$DOCKERDIR` to a Google Drive remote. It runs `rclone sync` once at startup and then every `RCLONE_SYNC_INTERVAL_SECONDS` seconds. Files removed locally are removed from the destination as well; the local source is mounted read-only. The rclone OAuth configuration lives under `$DOCKERDIR/appdata/rclone` and is included in the sync.
-
-Before starting the stack, create the Google Drive remote interactively. Use the same env-file as the normal stack command:
-
-```bash
-docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone config
-docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml run --rm --no-deps --entrypoint rclone rclone lsd google-drive:
-docker compose --env-file homelab-configs/.env -f docker-compose.main.yaml up -d
-```
-
-Use the `google-drive` remote name unless `RCLONE_REMOTE_NAME` is changed in `.env`. The default destination folder is `homelab-configs`.
-
-## Common Commands
-
-Validate the complete Compose model:
-
-```bash
-docker compose -f docker-compose.main.yaml config
-```
-
-Start or update the included stacks:
-
-```bash
-docker compose -f docker-compose.main.yaml up -d
-```
-
-Pull current images for included stacks:
-
-```bash
-docker compose -f docker-compose.main.yaml pull
-```
-
-Stop the included stacks:
-
-```bash
-docker compose -f docker-compose.main.yaml down
-```
-
-View logs for one service:
-
-```bash
-docker compose -f docker-compose.main.yaml logs -f traefik
-```
-
-
-## Automatic Deployment
-
-`.github/workflows/deploy.yml` deploys pushes to `main` through a GitHub Actions self-hosted runner installed on this machine. The runner must use the `homelab` label, run as a user that can read this checkout and access Docker, and be installed as a service so it starts after reboot.
-
-Set it up from the GitHub repository page under **Settings → Actions → Runners → New self-hosted runner**. Follow GitHub's generated Linux installation commands, add the `homelab` label when registering the runner, and keep the registration token out of the repository. The runner service user must be able to use the existing SSH key for `origin` and must be in the Docker group.
-
-On every push to `main`, the workflow fast-forwards `/home/luc/docker/homelab`, validates the complete configuration, pulls its images, and deploys every Compose file included by `docker-compose.main.yaml`. Because a self-hosted runner can execute shell commands on this server, protect the `main` branch and only allow trusted changes to merge.
-
-A manual `workflow_dispatch` run provides a `compose` dropdown. Keep it set to `all` to deploy the complete configuration, or select one file from `active/` to deploy only that Compose file. Single-file deployments use the shared networks and secrets from `docker-compose.main.yaml` and the same `homelab` project name as a full deployment.
-
-## Currently Included Stacks
-
-These files are included by `docker-compose.main.yaml` as of this README update:
-
-| Stack | Main service(s) | Purpose | Traefik hosts |
-| --- | --- | --- | --- |
-| `actual-server.yaml` | Actual Budget | Personal budgeting | `actual-server.$DOMAINNAME`, `as.$DOMAINNAME` |
-| `adguard.yaml` | AdGuard Home | DNS sinkhole and filtering | Direct ports `3000`, `53/tcp`, `53/udp` |
-| `airtrail.yaml` | AirTrail, Postgres | Travel history and flight tracking | `airtrail.$DOMAINNAME` |
-| `anythingllm.yaml` | AnythingLLM | Local LLM workspace | `llm.$DOMAINNAME` |
-| `audio-book-request.yaml` | Audiobook Request | Audiobook requests | `audiobookrequest.$DOMAINNAME` |
-| `aveon.yaml` | Aveon, Postgres, Redis | Custom flight search app | `aveon.$DOMAINNAME` |
-| `bazarr.yaml` | Bazarr | Subtitle management | `bazarr.$DOMAINNAME` |
-| `calibre.yaml` | Calibre | Ebook library management | `calibre.$DOMAINNAME`, `c.$DOMAINNAME` |
-| `changedetectionio.yaml` | changedetection.io, sockpuppetbrowser | Website change monitoring | `changedetection.$DOMAINNAME`, `cd.$DOMAINNAME` |
-| `cyberchef.yaml` | CyberChef | Data transformation toolbox | `cyberchef.$DOMAINNAME` |
-| `dawarich.yaml` | Dawarich, PostGIS, Redis, Sidekiq | Location timeline | `dawarich.$DOMAINNAME` |
-| `ddclient.yaml` | ddclient | Dynamic DNS updater | None |
-| `discovarr.yaml` | Discovarr | Media discovery automation | `discovarr.$DOMAINNAME` |
-| `facil-map.yaml` | FacilMap, PostGIS | Collaborative maps | `facilmap.$DOMAINNAME` |
-| `flaresolverr.yaml` | FlareSolverr | Cloudflare challenge solver for indexers | Direct port only |
-| `gatus.yaml` | Gatus | Status page and monitoring | `gatus.$DOMAINNAME`, `status.$DOMAINNAME` |
-| `home-assistant.yaml` | Home Assistant | Home automation | Host networking |
-| `huntarr.yaml` | Huntarr | Arr queue and media automation helper | `huntarr.$DOMAINNAME` |
-| `immich.yaml` | Immich, ML, Valkey, Postgres | Photo and video backup | `immich.$DOMAINNAME` |
-| `it-tools.yaml` | IT Tools | Browser-based utilities | `tools.$DOMAINNAME` |
-| `jellyfin.yaml` | Jellyfin | Media server | `jellyfin.$DOMAINNAME` |
-| `kavita.yaml` | Kavita | Reading server | `kavita.$DOMAINNAME` |
-| `kitchen-owl.yaml` | KitchenOwl frontend/backend | Groceries and meal planning | `kitchenowl.$DOMAINNAME`, `kitchenowlbackend.$DOMAINNAME` |
-| `lazylibrarian.yaml` | LazyLibrarian | Book/audiobook automation | `lazylibrarian.$DOMAINNAME`, `ll.$DOMAINNAME` |
-| `lucurlings.nl.yaml` | Personal website | Root website | `$DOMAINNAME` |
-| `mqtt.yaml` | Mosquitto | MQTT broker | Direct MQTT ports |
-| `n8n.yaml` | n8n | Workflow automation | `n8n.$DOMAINNAME` |
-| `nextcloud.yaml` | Nextcloud, MariaDB, Redis, cron, backup | File sync and collaboration | `nextcloud.$DOMAINNAME` |
-| `oauth.yaml` | traefik-forward-auth | Google OAuth middleware backend | `oauth.$DOMAINNAME` |
-| `ollama.yaml` | Ollama | Local model runtime | `ollama.$DOMAINNAME`, direct port `11434` |
-| `open-webui.yaml` | Open WebUI | Chat UI for Ollama | `open-webui.$DOMAINNAME` |
-| `portainer.yaml` | Portainer EE | Docker management UI | `portainer.$DOMAINNAME`, direct port `9443` |
-| `prowlarr.yaml` | Prowlarr | Indexer management | `prowlarr.$DOMAINNAME` |
-| `radarr.yaml` | Radarr | Movie automation | `radarr.$DOMAINNAME` |
-| `rclone.yaml` | rclone | One-way homelab configuration sync to Google Drive | None |
-| `ruview.yaml` | Ruvnet WiFi DensePose | WiFi sensing experiment | `ruvnet.$DOMAINNAME` |
-| `sabnzbd.yaml` | SABnzbd | Usenet downloader | `sabnzbd.$DOMAINNAME`, direct port `8084` |
-| `seerr.yaml` | Seerr/Jellyseerr | Media requests | `jellyseerr.$DOMAINNAME`, `seerr.$DOMAINNAME` |
-| `socket-proxy.yaml` | Docker Socket Proxy | Restricted Docker API access | Direct port `2375` |
-| `sonarr.yaml` | Sonarr | TV automation | `sonarr.$DOMAINNAME` |
-| `timemachine.yaml` | Time Machine | macOS network backups | Host networking |
-| `traefik.yaml` | Traefik | Reverse proxy and TLS | `traefik.$DOMAINNAME` |
-| `tubesync.yaml` | TubeSync, Postgres | YouTube archive/download manager | `tubesync.$DOMAINNAME` |
-| `watchtower.yaml` | Watchtower | Automated image updates | Direct port `8086` for metrics/API |
-| `whoami.yaml` | Traefik Whoami | Routing test endpoint | `whoami.$DOMAINNAME` |
-| `wizarr.yaml` | Wizarr | Media onboarding and invites | `wizarr.$DOMAINNAME` |
-
-## Active Files Not Included By Main Compose
-
-These files exist under `active/`, but are currently not launched by `docker-compose.main.yaml` because their include lines are commented out or absent:
-
-| Stack | Purpose | Notes |
-| --- | --- | --- |
-| `deluge.yaml` | Torrent client | Uses `network_mode: service:gluetun`. |
-| `gluetun.yaml` | VPN network container | Exposes Deluge through Traefik when enabled. |
-| `qbittorrent.yaml` | Torrent client | Uses `network_mode: service:gluetun`; not referenced by main compose. |
-| `readarr.yaml` | Book automation | File exists, include line is commented out. |
-
-## Service Patterns
-
-Most application stacks follow the same conventions:
-
-- `restart: unless-stopped` for long-running applications.
-- LinuxServer.io containers use `PUID`, `PGID`, and `TZ`.
-- Traefik labels set `entrypoints=websecure`, a hostname rule, an optional middleware chain, and an internal service port.
-- Public or semi-public flows such as Gatus status and Wizarr invites use `chain-no-auth@file`.
-- Arr apps and SABnzbd define a higher-priority auth-bypass router using `traefik-auth-bypass-key` for trusted automation clients.
-
-## Operational Notes
-
-- Traefik depends on the socket proxy at `tcp://socket-proxy:2375`.
-- The Docker socket proxy publishes `2375`; keep that reachable only on trusted networks.
-- Watchtower is configured to run daily at `04:00`, clean up old images, revive stopped containers, and send notifications through the `shoutrrr_telegram_secret` secret.
-- Home Assistant and Time Machine use host networking because they need LAN discovery or native network behavior.
-- Immich uses hardware devices under `/dev/dri` and a render group id of `993`; verify this matches the host.
-- Some stacks intentionally expose direct host ports in addition to Traefik routes for LAN or API use.
-
-## Adding Or Enabling A Stack
-
-1. Add or edit a stack file under `active/`.
-2. Attach web apps to `t3_proxy` and add Traefik labels when they need HTTPS routing.
-3. Add private bridge networks inside the app file when databases, caches, or workers should not be globally reachable.
-4. Add required environment variables to `.env.example`.
-5. Add the stack path to the `include:` list in `docker-compose.main.yaml`.
-6. Run `docker compose -f docker-compose.main.yaml config` before starting the stack.
-
-## Security Checklist
-
-- Keep `.env`, app-specific env files, and `$SECRETSDIR` out of git.
-- Do not expose `socket-proxy:2375` to the internet.
-- Use Cloudflare DNS API tokens with the smallest practical scope.
-- Review services that use `chain-no-auth@file` before publishing DNS records.
-- Check direct host ports whenever adding a new stack.
+- Review host port bindings when enabling a stack; several services intentionally expose both a direct LAN port and a Traefik route.

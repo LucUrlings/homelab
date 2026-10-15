@@ -7,14 +7,17 @@ on:
   workflow_dispatch:
     inputs:
       compose:
-        description: "Deploy all stacks or one Compose file"
+        description: "Deploy all stacks, one stack, or one Compose file"
         required: true
         default: all
         type: choice
         options:
           - all
+          - core
+          - main
           - active/actual-server.yaml
           - active/adguard.yaml
+          - active/agent-devstation.yaml
           - active/airtrail.yaml
           - active/anythingllm.yaml
           - active/atlas.yaml
@@ -43,6 +46,7 @@ on:
           - active/kitchen-owl.yaml
           - active/lazylibrarian.yaml
           - active/lucurlings.nl.yaml
+          - active/minecraft.yaml
           - active/minio.yaml
           - active/mqtt.yaml
           - active/n8n.yaml
@@ -102,7 +106,17 @@ jobs:
           set -euo pipefail
 
           if [[ "$REQUESTED_COMPOSE" == "all" ]]; then
-            echo "COMPOSE_FILE=docker-compose.main.yaml" >> "$GITHUB_ENV"
+            {
+              echo "COMPOSE_FILES<<EOF"
+              echo "docker-compose.core.yaml"
+              echo "docker-compose.main.yaml"
+              echo "EOF"
+            } >> "$GITHUB_ENV"
+            exit 0
+          fi
+
+          if [[ "$REQUESTED_COMPOSE" == "core" || "$REQUESTED_COMPOSE" == "main" ]]; then
+            echo "COMPOSE_FILES=docker-compose.$REQUESTED_COMPOSE.yaml" >> "$GITHUB_ENV"
             exit 0
           fi
 
@@ -122,35 +136,46 @@ jobs:
           fi
 
           selected_compose="$RUNNER_TEMP/homelab-selected-compose.yaml"
-          sed '/^include:/,$d' docker-compose.main.yaml > "$selected_compose"
+          base_compose=docker-compose.main.yaml
+          if grep -Fq "active/${compose_path#active/}" docker-compose.core.yaml; then
+            base_compose=docker-compose.core.yaml
+          fi
+
+          sed '/^include:/,$d' "$base_compose" > "$selected_compose"
           printf 'include:\n  - %s\n' "$PWD/$compose_path" >> "$selected_compose"
 
-          echo "Deploying only $compose_path"
-          echo "COMPOSE_FILE=$selected_compose" >> "$GITHUB_ENV"
+          echo "Deploying only $compose_path using $base_compose"
+          echo "COMPOSE_FILES=$selected_compose" >> "$GITHUB_ENV"
 
       - name: Pull latest images
         working-directory: /home/luc/docker/homelab
         run: |
-          docker compose \
-            --project-name homelab \
-            --env-file homelab-configs/.env \
-            -f "$COMPOSE_FILE" \
-            pull
+          while IFS= read -r compose_file; do
+            docker compose \
+              --project-name homelab \
+              --env-file homelab-configs/.env \
+              -f "$compose_file" \
+              pull
+          done <<< "$COMPOSE_FILES"
 
       - name: Validate Compose configuration
         working-directory: /home/luc/docker/homelab
         run: |
-          docker compose \
-            --project-name homelab \
-            --env-file homelab-configs/.env \
-            -f "$COMPOSE_FILE" \
-            config --quiet
+          while IFS= read -r compose_file; do
+            docker compose \
+              --project-name homelab \
+              --env-file homelab-configs/.env \
+              -f "$compose_file" \
+              config --quiet
+          done <<< "$COMPOSE_FILES"
 
       - name: Deploy stack
         working-directory: /home/luc/docker/homelab
         run: |
-          docker compose \
-            --project-name homelab \
-            --env-file homelab-configs/.env \
-            -f "$COMPOSE_FILE" \
-            up -d
+          while IFS= read -r compose_file; do
+            docker compose \
+              --project-name homelab \
+              --env-file homelab-configs/.env \
+              -f "$compose_file" \
+              up -d
+          done <<< "$COMPOSE_FILES"
