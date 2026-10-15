@@ -12,30 +12,28 @@ services:
     environment:
       AGENT_DEVSTATION_SDK_NODE: ${AGENT_DEVSTATION_SDK_NODE-24}
       AGENT_DEVSTATION_SDK_DOTNET: ${AGENT_DEVSTATION_SDK_DOTNET-10}
-      AGENT_DEVSTATION_DOCKER_CLI_ENABLED: ${AGENT_DEVSTATION_DOCKER_CLI_ENABLED-false}
-      AGENT_DEVSTATION_PLAYWRIGHT_CHROMIUM_ENABLED: ${AGENT_DEVSTATION_PLAYWRIGHT_CHROMIUM_ENABLED-false}
-      AGENT_DEVSTATION_PLAYWRIGHT_VERSION: ${AGENT_DEVSTATION_PLAYWRIGHT_VERSION-1.63.0}
+      AGENT_DEVSTATION_DOCKER_CLI_ENABLED: ${AGENT_DEVSTATION_DOCKER_CLI_ENABLED-true}
+      AGENT_DEVSTATION_PLAYWRIGHT_CHROMIUM_ENABLED: ${AGENT_DEVSTATION_PLAYWRIGHT_CHROMIUM_ENABLED:-true}
+      AGENT_DEVSTATION_PLAYWRIGHT_VERSION: ${AGENT_DEVSTATION_PLAYWRIGHT_VERSION:-1.63.0}
       AGENT_DEVSTATION_VSCODE_EDITOR_ENABLED: ${AGENT_DEVSTATION_VSCODE_EDITOR_ENABLED-true}
-      AGENT_DEVSTATION_VSCODE_PASSWORD: ${AGENT_DEVSTATION_VSCODE_PASSWORD-}
+      AGENT_DEVSTATION_VSCODE_PASSWORD: ${AGENT_DEVSTATION_VSCODE_PASSWORD:?Set AGENT_DEVSTATION_VSCODE_PASSWORD in your env file}
       AGENT_DEVSTATION_UID: ${AGENT_DEVSTATION_UID-1000}
       AGENT_DEVSTATION_GID: ${AGENT_DEVSTATION_GID-1000}
       DOCKER_HOST: tcp://agent-devstation-docker:2376
       DOCKER_TLS_VERIFY: "1"
       DOCKER_CERT_PATH: /certs/client
     volumes:
-      - $DOCKERDIR/appdata/agent-devstation/workspaces:/home/dev/workspaces
+      - ${DOCKERDIR:?Set DOCKERDIR}/appdata/agent-devstation/workspaces:/home/dev/workspaces
       - agent-devstation-home:/home/dev
       - agent-devstation-docker-client:/certs/client:ro
-    # Uncomment only when enabling the editor for local access.
-    # ports:
-    #   - "127.0.0.1:8080:8080"
     networks:
       - t3_proxy
       - agent-devstation-docker-network
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=t3_proxy"
       - "traefik.http.routers.agent-devstation.entrypoints=websecure"
-      - "traefik.http.routers.agent-devstation.rule=Host(`agent-devstation.$DOMAINNAME`)"
+      - "traefik.http.routers.agent-devstation.rule=Host(`agent-devstation.${DOMAINNAME:?Set DOMAINNAME}`)"
       - "traefik.http.routers.agent-devstation.middlewares=chain-oauth@file"
       - "traefik.http.routers.agent-devstation.service=agent-devstation-svc"
       - "traefik.http.services.agent-devstation-svc.loadbalancer.server.port=8080"
@@ -53,25 +51,166 @@ services:
     environment:
       DOCKER_TLS_CERTDIR: /certs
     volumes:
-      # Exactly the same source and destination as Agent Devstation:
-      - ${DOCKERDIR}/appdata/agent-devstation/workspaces:/home/dev/workspaces
+      - ${DOCKERDIR:?Set DOCKERDIR}/appdata/agent-devstation/workspaces:/home/dev/workspaces
       - agent-devstation-docker-data:/var/lib/docker
       - agent-devstation-docker-ca:/certs/ca
       - agent-devstation-docker-client:/certs/client
     networks:
       - agent-devstation-docker-network
     healthcheck:
-      test:
-        ["CMD", "docker", "--host=unix:///var/run/docker.sock", "info"]
+      test: ["CMD", "docker", "--host=unix:///var/run/docker.sock", "info"]
       interval: 5s
       timeout: 5s
       retries: 24
       start_period: 20s
+    # Optional host access to ports published by nested project containers:
     # ports:
-    #   - "127.0.0.1:5180:5180" # Watchtower frontend
-    #   - "127.0.0.1:5080:5080" # Watchtower API
+    #   - "127.0.0.1:5180:5180"
+    #   - "127.0.0.1:5080:5080"
     labels:
       - "traefik.enable=false"
+
+  agent-devstation-docker-pruner:
+    image: docker:29.8.1-cli
+    container_name: agent-devspace-docker-pruner
+    restart: unless-stopped
+    init: true
+    environment:
+      DOCKER_HOST: tcp://agent-devstation-docker:2376
+      DOCKER_TLS_VERIFY: "1"
+      DOCKER_CERT_PATH: /certs/client
+
+      # Run every six hours, initially waiting five minutes.
+      PRUNE_INTERVAL_SECONDS: "${AGENT_DEVSTATION_PRUNE_INTERVAL_SECONDS:-21600}"
+      PRUNE_START_DELAY_SECONDS: "${AGENT_DEVSTATION_PRUNE_START_DELAY_SECONDS:-300}"
+
+      # Containers/images/networks must have been CREATED before this cutoff.
+      PRUNE_UNUSED_UNTIL: "${AGENT_DEVSTATION_PRUNE_UNUSED_UNTIL:-168h}"
+
+      # Cleanup target for the default builder, not a continuous disk quota.
+      BUILDER_CACHE_KEEP_STORAGE: "${AGENT_DEVSTATION_BUILDER_CACHE_KEEP_STORAGE:-10GB}"
+
+      # Unreferenced anonymous volumes have no age-based retention period.
+      PRUNE_ANONYMOUS_VOLUMES: "${AGENT_DEVSTATION_PRUNE_ANONYMOUS_VOLUMES:-false}"
+    volumes:
+      - agent-devstation-docker-client:/certs/client:ro
+    networks:
+      - agent-devstation-docker-network
+    depends_on:
+      agent-devstation-docker:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        [ "$$PRUNE_INTERVAL_SECONDS" -gt 0 ] 2>/dev/null || {
+          echo "PRUNE_INTERVAL_SECONDS must be a positive integer" >&2
+          exit 2
+        }
+        [ "$$PRUNE_START_DELAY_SECONDS" -ge 0 ] 2>/dev/null || {
+          echo "PRUNE_START_DELAY_SECONDS must be a nonnegative integer" >&2
+          exit 2
+        }
+        case "$$PRUNE_ANONYMOUS_VOLUMES" in
+          true|false) ;;
+          *) echo "PRUNE_ANONYMOUS_VOLUMES must be true or false" >&2; exit 2 ;;
+        esac
+
+        prune() {
+          if ! docker "$$@"; then
+            errors=$$((errors + 1))
+            echo "Cleanup command failed: docker $$*" >&2
+          fi
+        }
+
+        sleep "$$PRUNE_START_DELAY_SECONDS"
+
+        while :; do
+          errors=0
+          echo "$$(date -u +%FT%TZ) Starting nested Docker cleanup"
+
+          prune container prune -f --filter "until=$$PRUNE_UNUSED_UNTIL"
+          prune image prune -af --filter "until=$$PRUNE_UNUSED_UNTIL"
+          prune network prune -f --filter "until=$$PRUNE_UNUSED_UNTIL"
+          prune builder prune -af --keep-storage "$$BUILDER_CACHE_KEEP_STORAGE"
+
+          # Only volumes explicitly labelled as disposable, including named ones.
+          prune volume prune -af --filter "label=devstation.cleanup=disposable"
+
+          if [ "$$PRUNE_ANONYMOUS_VOLUMES" = "true" ]; then
+            prune volume prune -f
+          fi
+
+          prune system df
+          echo "$$(date -u +%FT%TZ) Cleanup finished; errors=$$errors"
+
+          sleep "$$PRUNE_INTERVAL_SECONDS"
+        done
+    labels:
+      - "traefik.enable=false"
+
+  agent-devstation-disk-health:
+    image: busybox:1.37
+    container_name: agent-devspace-disk-health
+    restart: unless-stopped
+    init: true
+    environment:
+      DISK_WARN_PERCENT: "${AGENT_DEVSTATION_DISK_WARN_PERCENT:-85}"
+    volumes:
+      - agent-devstation-docker-data:/docker-data:ro
+    networks:
+      - t3_proxy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -eu
+
+        case "$$DISK_WARN_PERCENT" in
+          [1-9]|[1-9][0-9]|100) ;;
+          *) echo "DISK_WARN_PERCENT must be an integer from 1 to 100" >&2; exit 2 ;;
+        esac
+
+        mkdir -p /www/cgi-bin
+
+        cat > /www/cgi-bin/health <<'CGI'
+        #!/bin/sh
+        printf 'Content-Type: application/json\r\nCache-Control: no-store\r\n\r\n'
+
+        if ! stats=$$(df -Pk /docker-data 2>/dev/null); then
+          printf '{"healthy":false,"error":"df failed"}\n'
+          exit 0
+        fi
+
+        values=$$(printf '%s\n' "$$stats" | awk '
+          NR == 2 && $$5 ~ /^[0-9]+%$$/ && $$4 ~ /^[0-9]+$$/ {
+            sub(/%$$/, "", $$5);
+            printf "%d %d", $$5, $$4 / 1048576
+          }')
+
+        set -- $$values
+        if [ "$$#" -ne 2 ]; then
+          printf '{"healthy":false,"error":"unexpected df output"}\n'
+          exit 0
+        fi
+
+        used_percent=$$1
+        available_gib=$$2
+        healthy=false
+
+        if [ "$$used_percent" -lt "$$DISK_WARN_PERCENT" ]; then
+          healthy=true
+        fi
+
+        printf '{"healthy":%s,"used_percent":%s,"available_gib":%s,"threshold_percent":%s}\n' \
+          "$$healthy" "$$used_percent" "$$available_gib" "$$DISK_WARN_PERCENT"
+        CGI
+
+        chmod 0755 /www/cgi-bin/health
+        exec httpd -f -p 8080 -h /www
+    labels:
+      - "traefik.enable=false"
+
 volumes:
   agent-devstation-home:
   agent-devstation-docker-data:
