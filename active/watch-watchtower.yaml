@@ -190,7 +190,7 @@ services:
     # ports:
     #   - "${WATCHTOWER_MANAGEMENT_BIND_ADDRESS:-127.0.0.1}:${WATCHTOWER_MINIO_CONSOLE_PORT:-9001}:9001"
     volumes:
-      - watchtower-minio-data:/data
+      - /home/luc/docker/homelab/mnt-storage/watchtower/minio-data:/data
       - /home/luc/docker/homelab/homelab-configs/secrets/minio-watchtower/minio.license:/minio.license:ro
     restart: unless-stopped
     networks:
@@ -415,8 +415,6 @@ volumes:
     name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-postgres18-data
   watchtower-rabbitmq-data:
     name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-rabbitmq-data
-  watchtower-minio-data:
-    name: ${WATCHTOWER_COMPOSE_PROJECT_NAME:-watchtower}-minio-data
   watchtower-decider-models:
 
 networks:
