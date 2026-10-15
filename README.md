@@ -46,6 +46,7 @@ Both use the Compose project name `homelab`. Service definitions live in `active
 | `gatus.yaml` | Gatus | Availability monitoring and status page | `gatus.$DOMAINNAME`, `status.$DOMAINNAME` |
 | `portainer.yaml` | Portainer EE | Docker management | Port `9000`; `portainer.$DOMAINNAME` |
 | `watchtower.yaml` | Watchtower | Automated container image updates | Port `8086` |
+| `rclone.yaml` | rclone | One-way configuration backup to Google Drive | No UI |
 
 ### Main stack
 
@@ -62,7 +63,6 @@ Both use the Compose project name `homelab`. Service definitions live in `active
 | `agent-devstation.yaml` | Devstation, Docker-in-Docker, pruner, disk health | Browser-based development environment | `agent-devstation.$DOMAINNAME` |
 | `minecraft.yaml` | Minecraft server | Game server | TCP port `25565` through Traefik |
 | `aveon.yaml` | Aveon, PostgreSQL, Redis | Flight search application | `aveon.$DOMAINNAME` |
-| `rclone.yaml` | rclone | One-way configuration backup to Google Drive | No UI |
 | `sonarr.yaml` | Sonarr | TV automation | Port `8989`; `sonarr.$DOMAINNAME` |
 | `radarr.yaml` | Radarr | Movie automation | Port `7878`; `radarr.$DOMAINNAME` |
 | `prowlarr.yaml` | Prowlarr | Indexer management | Port `9696`; `prowlarr.$DOMAINNAME` |

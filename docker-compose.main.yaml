@@ -22,9 +22,6 @@ include:
   - $USERDIR/docker/homelab/active/minecraft.yaml
   - $USERDIR/docker/homelab/active/aveon.yaml
 
-  # For backing up configs to Google Drive, see https://rclone.org/commands/rclone_sync/
-  - $USERDIR/docker/homelab/active/rclone.yaml
-
   # Media stack
   - $USERDIR/docker/homelab/active/sonarr.yaml
   - $USERDIR/docker/homelab/active/radarr.yaml

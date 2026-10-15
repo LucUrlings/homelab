@@ -55,3 +55,4 @@ include:
   - $USERDIR/docker/homelab/active/gatus.yaml
   - $USERDIR/docker/homelab/active/portainer.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
+  - $USERDIR/docker/homelab/active/rclone.yaml
