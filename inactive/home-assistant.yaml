@@ -21,4 +21,3 @@ services:
     # networks:
     #   - t3_proxy
     #   - socket_proxy
-      

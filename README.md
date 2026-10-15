@@ -174,9 +174,11 @@ Manual workflow runs support:
 
 All deployments use the `homelab` project name and `homelab-configs/.env`.
 
-## Available but Disabled
+## Inactive Stacks
 
-The following files exist under `active/` but are not included by either root Compose model:
+Only Compose files included by a root model are kept under `active/`. Disabled definitions live under `inactive/` and are not offered by the deployment workflow.
+
+The following stacks were moved from `active/` to `inactive/` during the core/main cleanup:
 
 - `actual-server.yaml`, `airtrail.yaml`, `anythingllm.yaml`, `audio-book-request.yaml`
 
@@ -190,7 +192,7 @@ The following files exist under `active/` but are not included by either root Co
 
 - `ollama.yaml`, `open-webui.yaml`, `qbittorrent.yaml`, `readarr.yaml`, `ruview.yaml`, `tubesync.yaml`
 
-`deluge.yaml` and `qbittorrent.yaml` require the disabled `gluetun.yaml` service because they use `network_mode: service:gluetun`.
+The `inactive/` directory also contains older parked and experimental definitions that were already disabled. `deluge.yaml` and `qbittorrent.yaml` require `gluetun.yaml` because they use `network_mode: service:gluetun`.
 
 ## Repository Layout
 
@@ -198,14 +200,14 @@ The following files exist under `active/` but are not included by either root Co
 | --- | --- |
 | `docker-compose.core.yaml` | Always-on infrastructure, shared network ownership, and secrets |
 | `docker-compose.main.yaml` | Restartable application workloads |
-| `active/` | Available service stack fragments |
-| `inactive/` | Parked legacy or experimental stack fragments |
+| `active/` | Enabled service fragments included by core or main |
+| `inactive/` | Disabled, parked, or experimental service definitions |
 | `.env.example` | Environment template |
 | `homelab-configs/` | Deployed environment, secrets, and application configuration |
 
 ## Adding or Enabling a Stack
 
-1. Add or edit its Compose file under `active/`.
+1. Add a new Compose file under `active/`, or move an existing definition there from `inactive/`.
 2. Attach routed web services to `t3_proxy` and add Traefik labels.
 3. Use a private application network for databases, caches, and workers.
 4. Add required settings to `.env.example` and the deployed environment file.
