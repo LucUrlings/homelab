@@ -112,6 +112,34 @@ Keep the environment file, app-specific environment files, and `$SECRETSDIR` out
 
 ## Operations
 
+### Aggregate Docker resource limits
+
+All containers run inside a systemd `docker.slice` with aggregate CPU, memory,
+swap, task, and I/O controls. The tracked source, rationale, installation
+paths, and operational commands are documented in
+[`host-config/README.md`](host-config/README.md).
+
+Check the effective limits and verify that every running container belongs to
+the slice:
+
+```bash
+./scripts/check-docker-limits
+```
+
+These controls intentionally reserve approximately 1 GiB RAM and 0.5
+core-equivalent for non-container host work. Changing Docker's cgroup parent or
+recreating the core lifecycle group briefly interrupts DNS and ingress.
+
+### Prune unused Docker images
+
+Remove host-wide images that are not referenced by any container and were
+created more than seven days ago. This does not require stopping either the
+core or main Compose lifecycle group:
+
+```bash
+docker image prune --all --force --filter "until=168h"
+```
+
 Show current status:
 
 ```bash
@@ -202,6 +230,8 @@ The `inactive/` directory also contains older parked and experimental definition
 | `docker-compose.main.yaml` | Restartable application workloads |
 | `active/` | Enabled service fragments included by core or main |
 | `inactive/` | Disabled, parked, or experimental service definitions |
+| `host-config/` | Version-controlled host-level Docker resource controls |
+| `scripts/` | Operational validation and maintenance helpers |
 | `.env.example` | Environment template |
 | `homelab-configs/` | Deployed environment, secrets, and application configuration |
 

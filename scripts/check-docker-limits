@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+expected_slice_target=/home/luc/docker/homelab/host-config/systemd/docker.slice
+expected_daemon_target=/home/luc/docker/homelab/host-config/docker/daemon.json
+
+check_link() {
+  local link_path=$1
+  local expected_target=$2
+  local actual_target
+
+  if [[ ! -L "$link_path" ]]; then
+    printf 'ERROR: %s is not a symlink\n' "$link_path" >&2
+    return 1
+  fi
+
+  actual_target=$(readlink -f -- "$link_path")
+  if [[ "$actual_target" != "$expected_target" ]]; then
+    printf 'ERROR: %s points to %s, expected %s\n' \
+      "$link_path" "$actual_target" "$expected_target" >&2
+    return 1
+  fi
+
+  printf 'OK: %s -> %s\n' "$link_path" "$actual_target"
+}
+
+check_link /etc/systemd/system/docker.slice "$expected_slice_target"
+check_link /etc/docker/daemon.json "$expected_daemon_target"
+
+printf '\nEffective docker.slice properties:\n'
+systemctl show docker.slice \
+  -p ActiveState \
+  -p CPUQuotaPerSecUSec \
+  -p MemoryCurrent \
+  -p MemoryHigh \
+  -p MemoryMax \
+  -p MemorySwapCurrent \
+  -p MemorySwapMax \
+  -p TasksCurrent \
+  -p TasksMax \
+  -p IOWeight
+
+bad_containers=0
+checked_containers=0
+
+while IFS= read -r container_id; do
+  [[ -n "$container_id" ]] || continue
+
+  container_name=$(docker inspect --format '{{.Name}}' "$container_id")
+  container_pid=$(docker inspect --format '{{.State.Pid}}' "$container_id")
+  cgroup_path=$(awk -F: '$1 == "0" { print $3 }' "/proc/$container_pid/cgroup")
+  checked_containers=$((checked_containers + 1))
+
+  if [[ "$cgroup_path" != /docker.slice/* ]]; then
+    printf 'ERROR: %s is outside docker.slice: %s\n' \
+      "${container_name#/}" "$cgroup_path" >&2
+    bad_containers=$((bad_containers + 1))
+  fi
+done < <(docker ps --quiet)
+
+if (( bad_containers > 0 )); then
+  printf '\n%d of %d running containers are outside docker.slice.\n' \
+    "$bad_containers" "$checked_containers" >&2
+  exit 1
+fi
+
+printf '\nOK: all %d running containers are inside docker.slice.\n' \
+  "$checked_containers"

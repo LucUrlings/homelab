@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if (( EUID != 0 )); then
+  printf 'Run this installer with sudo:\n  sudo %q\n' "$0" >&2
+  exit 1
+fi
+
+repo_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd -P)
+slice_source=$repo_root/host-config/systemd/docker.slice
+daemon_source=$repo_root/host-config/docker/daemon.json
+slice_target=/etc/systemd/system/docker.slice
+daemon_target=/etc/docker/daemon.json
+
+install_link() {
+  local source_path=$1
+  local target_path=$2
+  local current_target
+
+  if [[ -L "$target_path" ]]; then
+    current_target=$(readlink -f -- "$target_path")
+    if [[ "$current_target" == "$source_path" ]]; then
+      printf 'Already installed: %s -> %s\n' "$target_path" "$source_path"
+      return
+    fi
+  fi
+
+  if [[ -e "$target_path" || -L "$target_path" ]]; then
+    printf 'Refusing to replace existing path: %s\n' "$target_path" >&2
+    exit 1
+  fi
+
+  ln -s -- "$source_path" "$target_path"
+  printf 'Installed: %s -> %s\n' "$target_path" "$source_path"
+}
+
+cd -- "$repo_root"
+
+systemd-analyze verify "$slice_source"
+dockerd --validate --config-file="$daemon_source"
+
+docker compose --project-name homelab --env-file homelab-configs/.env \
+  -f docker-compose.core.yaml config --quiet
+docker compose --project-name homelab --env-file homelab-configs/.env \
+  -f docker-compose.main.yaml config --quiet
+
+install -d -m 0755 /etc/docker
+install_link "$slice_source" "$slice_target"
+install_link "$daemon_source" "$daemon_target"
+
+systemctl daemon-reload
+systemctl restart docker
+
+for attempt in {1..30}; do
+  if docker info >/dev/null 2>&1; then
+    break
+  fi
+
+  if (( attempt == 30 )); then
+    printf 'Docker did not become ready after 30 seconds.\n' >&2
+    exit 1
+  fi
+
+  sleep 1
+done
+
+"$repo_root/scripts/check-docker-limits"

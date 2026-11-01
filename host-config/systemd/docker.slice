@@ -1,0 +1,17 @@
+[Unit]
+Description=Aggregate resource limits for all Docker containers
+Documentation=file:/home/luc/docker/homelab/host-config/README.md
+
+[Slice]
+CPUQuota=750%
+
+MemoryAccounting=yes
+MemoryHigh=13G
+MemoryMax=14183M
+MemorySwapMax=1G
+
+TasksAccounting=yes
+TasksMax=8192
+
+IOAccounting=yes
+IOWeight=50
