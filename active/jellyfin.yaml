@@ -1,6 +1,9 @@
 services: 
   jellyfin:
     image: linuxserver/jellyfin:latest
+    cpu_shares: 2048
+    blkio_config:
+      weight: 800
     container_name: jellyfin
     restart: unless-stopped
     group_add:

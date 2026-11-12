@@ -24,23 +24,22 @@ x-web-push-environment: &web-push-environment
   WebPush__PrivateKey: ${WATCHTOWER_WEB_PUSH_PRIVATE_KEY:-}
   WebPush__Subject: ${WATCHTOWER_WEB_PUSH_SUBJECT:-}
 
-x-ebay-environment: &ebay-environment
-  Ebay__Enabled: ${WATCHTOWER_EBAY_ENABLED:-false}
+x-ebay-api-environment: &ebay-api-environment
   Ebay__Environment: ${WATCHTOWER_EBAY_ENVIRONMENT:-Sandbox}
   Ebay__ClientId: ${WATCHTOWER_EBAY_CLIENT_ID:-}
   Ebay__ClientSecret: ${WATCHTOWER_EBAY_CLIENT_SECRET:-}
+
+x-ebay-environment: &ebay-environment
+  <<: *ebay-api-environment
+  Ebay__Enabled: ${WATCHTOWER_EBAY_ENABLED:-false}
   Ebay__MarketplaceId: ${WATCHTOWER_EBAY_MARKETPLACE_ID:-EBAY_US}
   Ebay__DeliveryCountry: ${WATCHTOWER_EBAY_DELIVERY_COUNTRY:-IE}
   Ebay__DeliveryPostalCode: ${WATCHTOWER_EBAY_DELIVERY_POSTAL_CODE:-}
 
 x-ebay-compliance-api-environment: &ebay-compliance-api-environment
+  <<: *ebay-api-environment
   Ebay__AccountDeletionEndpoint: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_ENDPOINT:-}
   Ebay__AccountDeletionVerificationToken: ${WATCHTOWER_EBAY_ACCOUNT_DELETION_VERIFICATION_TOKEN:-}
-
-x-ebay-compliance-worker-environment: &ebay-compliance-worker-environment
-  Ebay__Environment: ${WATCHTOWER_EBAY_ENVIRONMENT:-Sandbox}
-  Ebay__ClientId: ${WATCHTOWER_EBAY_CLIENT_ID:-}
-  Ebay__ClientSecret: ${WATCHTOWER_EBAY_CLIENT_SECRET:-}
 
 x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__PollIntervalMilliseconds: ${WATCHTOWER_WORKER_POLICY_POLL_INTERVAL_MILLISECONDS:-2000}
@@ -52,13 +51,23 @@ x-worker-policy-environment: &worker-policy-environment
   WorkerPolicies__Chrono24DiscoveryHardMaximum: ${WATCHTOWER_WORKER_CHRONO24_DISCOVERY_HARD_MAXIMUM:-3}
   WorkerPolicies__Chrono24DetailDefaultConcurrency: ${WATCHTOWER_WORKER_CHRONO24_DETAIL_DEFAULT_CONCURRENCY:-3}
   WorkerPolicies__Chrono24DetailHardMaximum: ${WATCHTOWER_WORKER_CHRONO24_DETAIL_HARD_MAXIMUM:-10}
-  WorkerPolicies__ImageDefaultConcurrency: ${WATCHTOWER_WORKER_IMAGE_DEFAULT_CONCURRENCY:-2}
-  WorkerPolicies__ImageHardMaximum: ${WATCHTOWER_WORKER_IMAGE_HARD_MAXIMUM:-10}
   WorkerPolicies__EbayDiscoveryDefaultConcurrency: ${WATCHTOWER_WORKER_EBAY_DISCOVERY_DEFAULT_CONCURRENCY:-1}
   WorkerPolicies__EbayDiscoveryHardMaximum: ${WATCHTOWER_WORKER_EBAY_DISCOVERY_HARD_MAXIMUM:-3}
   WorkerPolicies__EbayDetailDefaultConcurrency: ${WATCHTOWER_WORKER_EBAY_DETAIL_DEFAULT_CONCURRENCY:-2}
   WorkerPolicies__EbayDetailHardMaximum: ${WATCHTOWER_WORKER_EBAY_DETAIL_HARD_MAXIMUM:-10}
+  WorkerPolicies__ImageDefaultConcurrency: ${WATCHTOWER_WORKER_IMAGE_DEFAULT_CONCURRENCY:-2}
+  WorkerPolicies__ImageHardMaximum: ${WATCHTOWER_WORKER_IMAGE_HARD_MAXIMUM:-10}
 
+x-saved-search-scheduling-environment: &saved-search-scheduling-environment
+  SavedSearchScheduling__MaximumCandidatesPerInvocation: ${WATCHTOWER_SCHEDULER_MAXIMUM_CANDIDATES_PER_INVOCATION:-250}
+  SavedSearchScheduling__PageSize: ${WATCHTOWER_SCHEDULER_PAGE_SIZE:-50}
+  SavedSearchScheduling__MaximumConcurrency: ${WATCHTOWER_SCHEDULER_MAXIMUM_CONCURRENCY:-8}
+  SavedSearchScheduling__PerSearchTimeoutSeconds: ${WATCHTOWER_SCHEDULER_PER_SEARCH_TIMEOUT_SECONDS:-15}
+  SavedSearchScheduling__InvocationTimeoutSeconds: ${WATCHTOWER_SCHEDULER_INVOCATION_TIMEOUT_SECONDS:-45}
+  SavedSearchScheduling__FailureRetryBaseSeconds: ${WATCHTOWER_SCHEDULER_FAILURE_RETRY_BASE_SECONDS:-60}
+  SavedSearchScheduling__FailureRetryMaximumSeconds: ${WATCHTOWER_SCHEDULER_FAILURE_RETRY_MAXIMUM_SECONDS:-3600}
+  SavedSearchScheduling__HealthStaleAfterSeconds: ${WATCHTOWER_SCHEDULER_HEALTH_STALE_AFTER_SECONDS:-180}
+  SavedSearchScheduling__WatchdogTimeoutSeconds: ${WATCHTOWER_SCHEDULER_WATCHDOG_TIMEOUT_SECONDS:-60}
 
 x-application-service: &application-service
   image: ${WATCHTOWER_IMAGE:-ghcr.io/lucurlings/watchtower}:${WATCHTOWER_IMAGE_TAG:-latest}
@@ -280,7 +289,6 @@ services:
           *database-environment,
           *rabbitmq-environment,
           *error-reporting-environment,
-          *ebay-compliance-worker-environment,
         ]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     depends_on:
@@ -317,6 +325,7 @@ services:
           *web-push-environment,
           *ebay-environment,
           *worker-policy-environment,
+          *saved-search-scheduling-environment,
         ]
       ASPNETCORE_ENVIRONMENT: ${WATCHTOWER_ASPNETCORE_ENVIRONMENT:-Production}
       ASPNETCORE_HTTP_PORTS: "8080"
@@ -398,7 +407,13 @@ services:
     working_dir: /app/scheduler
     entrypoint: ["dotnet", "/app/scheduler/Watchtower.Scheduler.dll"]
     environment:
-      <<: [*database-environment, *error-reporting-environment, *ebay-environment]
+      <<:
+        [
+          *database-environment,
+          *error-reporting-environment,
+          *ebay-environment,
+          *saved-search-scheduling-environment,
+        ]
       DOTNET_ENVIRONMENT: ${WATCHTOWER_DOTNET_ENVIRONMENT:-Production}
     depends_on:
       watchtower-migrator:
