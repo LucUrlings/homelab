@@ -56,3 +56,4 @@ include:
   - $USERDIR/docker/homelab/active/portainer.yaml
   - $USERDIR/docker/homelab/active/watchtower.yaml
   - $USERDIR/docker/homelab/active/rclone.yaml
+  - $USERDIR/docker/homelab/active/github-runner.yaml

@@ -142,9 +142,20 @@ jobs:
         working-directory: /home/luc/docker/homelab
         run: |
           while IFS= read -r compose_file; do
+            services_output=$(docker compose \
+              --project-name homelab \
+              --env-file homelab-configs/.env \
+              -f "$compose_file" \
+              config --services)
+            mapfile -t services < <(grep -Fxv github-runner <<< "$services_output")
+
+            if (( ${#services[@]} == 0 )); then
+              continue
+            fi
+
             docker compose \
               --project-name homelab \
               --env-file homelab-configs/.env \
               -f "$compose_file" \
-              up -d
+              up -d "${services[@]}"
           done <<< "$COMPOSE_FILES"

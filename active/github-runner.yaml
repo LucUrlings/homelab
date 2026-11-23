@@ -1,0 +1,32 @@
+services:
+  github-runner:
+    image: ${GITHUB_RUNNER_IMAGE:-myoung34/github-runner:ubuntu-resolute}
+    container_name: github-runner
+    hostname: ${GITHUB_RUNNER_NAME:-homelab}
+    pull_policy: always
+    restart: unless-stopped
+    init: true
+    stop_grace_period: 2m
+    cpus: 2.0
+    mem_reservation: 512m
+    mem_limit: 4g
+    pids_limit: 512
+    environment:
+      ACCESS_TOKEN: ${GITHUB_RUNNER_ACCESS_TOKEN:?Set GITHUB_RUNNER_ACCESS_TOKEN in your env file}
+      DISABLE_AUTO_UPDATE: "true"
+      GIT_CONFIG_COUNT: "1"
+      GIT_CONFIG_KEY_0: safe.directory
+      GIT_CONFIG_VALUE_0: /home/luc/docker/homelab
+      LABELS: ${GITHUB_RUNNER_LABELS:-homelab}
+      REPO_URL: ${GITHUB_RUNNER_REPO_URL:-https://github.com/LucUrlings/homelab}
+      RUNNER_NAME: ${GITHUB_RUNNER_NAME:-homelab}
+      RUNNER_SCOPE: repo
+      RUNNER_WORKDIR: /tmp/runner/work
+      TZ: ${TZ:-Etc/UTC}
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${USERDIR:?Set USERDIR}/docker/homelab:/home/luc/docker/homelab
+    labels:
+      - "traefik.enable=false"
+      # Updating the runner from inside its own job interrupts that job.
+      - "com.centurylinklabs.watchtower.enable=false"

@@ -47,6 +47,7 @@ Both use the Compose project name `homelab`. Service definitions live in `active
 | `portainer.yaml` | Portainer EE | Docker management | Port `9000`; `portainer.$DOMAINNAME` |
 | `watchtower.yaml` | Watchtower | Automated container image updates | Port `8086` |
 | `rclone.yaml` | rclone | One-way configuration backup to Google Drive | No UI |
+| `github-runner.yaml` | GitHub Actions runner | Repository-scoped self-hosted deployment runner | No UI |
 
 ### Main stack
 
@@ -91,6 +92,8 @@ The deployed environment file is `homelab-configs/.env`; `.env.example` is the r
 - Routing: `DOMAINNAME`, `CLOUDFLARE_IPS`, `LOCAL_IPS`, and `TRAEFIK_AUTH_BYPASS_KEY`.
 
 - Service-specific credentials and settings for Time Machine, Aveon, Bugsink, Umami, Watch Watchtower, Agent Devstation, and rclone.
+
+- GitHub runner registration: `GITHUB_RUNNER_ACCESS_TOKEN`, plus optional image, repository URL, runner name, and labels overrides.
 
 The core model declares these files from `$SECRETSDIR`:
 
@@ -202,6 +205,25 @@ Manual workflow runs support:
 
 All deployments use the `homelab` project name and `homelab-configs/.env`.
 
+The runner is defined in `active/github-runner.yaml` and registers against
+`https://github.com/LucUrlings/homelab` with the `homelab` label by default. Before
+the first deployment, add a fine-grained GitHub token restricted to that
+repository with **Administration: read and write** to
+`GITHUB_RUNNER_ACCESS_TOKEN` in `homelab-configs/.env`. A classic token instead
+needs the `repo` scope. The token obtains short-lived registration tokens and
+must remain available whenever the container is recreated.
+
+Bootstrap or deliberately upgrade the runner from the host, not from a job
+running on the runner itself:
+
+```bash
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml pull github-runner
+docker compose --project-name homelab --env-file homelab-configs/.env -f docker-compose.core.yaml up -d github-runner
+```
+
+Automated deployments and Watchtower exclude this container so an update does
+not terminate its own in-progress deployment job.
+
 ## Inactive Stacks
 
 Only Compose files included by a root model are kept under `active/`. Disabled definitions live under `inactive/` and are not offered by the deployment workflow.
@@ -250,6 +272,8 @@ The `inactive/` directory also contains older parked and experimental definition
 - Socket Proxy publishes port `2375`; restrict it at the host and network perimeter.
 
 - Watchtower mounts `/var/run/docker.sock` directly and can update or restart any container.
+
+- The GitHub Actions runner also mounts `/var/run/docker.sock` and the homelab checkout read-write. Only run trusted workflows on it, and keep pull-request workflows from untrusted forks off this runner.
 
 - Use a narrowly scoped Cloudflare DNS token for certificate issuance.
 
